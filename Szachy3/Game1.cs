@@ -1,35 +1,101 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Net.Mime;
 
 namespace Szachy3
 {
     public class Game1 : Game
     {
+        public enum Kolor_figury { WHITE, BLACK};
+        public class Piece
+        {
+            public static readonly int orginal_piece_size = 100;
+            public Texture2D picture;
+            public Vector2 position;
+            public float curent_size=1;
+            public Kolor_figury kolor;
+            public readonly int id;
+            private static int liczba_figur=0;
+
+            // do animacji
+            public bool zbity = false;
+            public float elapsedTime=0;
+            public Vector2 przemieszczenie;
+            public Vector2 miejsce_docelowe;
+
+            public Piece(Texture2D tekstura)
+            { 
+                picture = tekstura;
+                id = liczba_figur++;
+            }
+            public Piece(Texture2D tekstura, Vector2 position)
+            {
+                picture = tekstura;
+                this.position= position;
+                id = liczba_figur++;
+            }
+
+            public bool IsMouseOver(MouseState mouseState)
+            {
+                Rectangle objectBounds = new Rectangle((int)position.X + board_offset_x, (int)position.Y + board_offset_y, picture.Width, picture.Height);
+                return objectBounds.Contains(mouseState.X, mouseState.Y);
+            }
+          
+            public void AnimacjaZbicia(float game_elapsed_time)
+            {
+                // Animacja zmniejszania
+                elapsedTime += game_elapsed_time;
+
+                if (elapsedTime <= animationDuration)
+                {
+                    float t = elapsedTime / animationDuration;
+                    curent_size = MathHelper.Lerp(1f, targetScale, t);
+                }
+                else
+                    curent_size = targetScale;
+
+                // Animacja przejscia
+                if (position == miejsce_docelowe) return;
+
+                float distance = Vector2.Distance(position, miejsce_docelowe);
+                float moveAmount = moveSpeed * game_elapsed_time;
+                if (distance > moveAmount)
+                    position += przemieszczenie * moveAmount;
+                else
+                    position = miejsce_docelowe; // Docelowa pozycja osiągnięta
+            }
+        }
+
+
+        // ustawienia
+        private const int window_width = 1300;
+        private const int window_height = 900;
+
+
         // board
         Texture2D board;
         Vector2 board_position;
         int board_start_position_x = 0;
         int board_start_position_y = 0;
-        int board_offset_x = 50;
-        int board_offset_y = 50;
+        public static int board_offset_x = 50;
+        public static int board_offset_y = 50;
+        public int zbite_biale=0;
+        public int zbite_czarne=0;
 
-        // pieces
-        Texture2D[] piece = new Texture2D[32];
-        Vector2[] piece_position = new Vector2[32];
+        // tablica figur
+        public Piece[] figury;
+        public int liczba_figur;
+
+        // mouse dragg piece
         public int index_dragged_piece = -1;
-        public int prev_position_x;
-        public int prev_position_y;
-        public const int figure_size= 100;
-        public static float[] curent_size = new float[32]; // potrzebne do animacji
-        public static bool[] animation_on = new bool[32]; // potrzebne do animacji
-        public static float[] elapsedTime=new float[32]; // potrzebne do animacji
-        public static Vector2[] przemieszczenie= new Vector2[32];
-        public static Vector2[] miejsce_docelowe= new Vector2[32];
-
-
+        public Vector2 prev_position;
+      
         // game
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
@@ -45,182 +111,58 @@ namespace Szachy3
         int button1_start_position_x = 1000;
         int button1_start_position_y = 350;
 
-        // animation
-        static float initialScale = 1.0f;         // Initial scale
+        // animation     
         static float targetScale = 0.3f;          // Target scale 
         static float animationDuration = 0.2f;    // Animation duration in seconds
         static float moveSpeed = 5000.0f;
 
+        Piece pionek;
 
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            _graphics.PreferredBackBufferWidth = 1300; // Set your desired width
-            _graphics.PreferredBackBufferHeight = 900; // Set your desired height
-
+            _graphics.PreferredBackBufferWidth = window_width; 
+            _graphics.PreferredBackBufferHeight = window_height;
         }
 
         protected override void Initialize()
-        {
-            this.move_sound = Content.Load<Song>("tech_sound");
-            this.wrong_move_sound = Content.Load<Song>("sound2");
-            this.capture_sound = Content.Load<Song>("explo_sound");
+        { 
+            Initialize_Sounds();
             Initialize_Board();
             Initialize_Pieces();
-            button1 = Content.Load<Texture2D>("resetuj");
-            button1_position = new Vector2(button1_start_position_x, button1_start_position_y);
-
+            Initialize_Buttons();
+ 
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
         }
-        
+     
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)) //wychodznie klawiszami z aplikacji
                 Exit();
-
+            
 
             MouseState mouseState = Mouse.GetState();
 
             // wyswietlanie kursora raczki nad figura
-            bool over = false;
-            for (int i = 0; i < 32; i++)
-            {
-                if (IsMouseOverObject(mouseState, i))
-                {
-                    Mouse.SetCursor(MouseCursor.Hand);
-                    over = true;
-                }
-            }
-            if (!over) Mouse.SetCursor(MouseCursor.Arrow);
-
+            Mouse.SetCursor(figury.Any(figura => figura.IsMouseOver(mouseState)) ? MouseCursor.Hand : MouseCursor.Arrow);
 
             // lapanie figur
-            if (mouseState.LeftButton == ButtonState.Pressed)
-            {
-                if(index_dragged_piece==-1)
-                {
-                    for (int i = 0; i < 32; i++)
-                    {
-                        if (IsMouseOverObject(mouseState, i))
-                        {
-                            index_dragged_piece = i;
-                            prev_position_x = (int)piece_position[i].X;
-                            prev_position_y = (int)piece_position[i].Y;
-                        }
-                    }
-                }
-                else
-                {
-                    piece_position[index_dragged_piece] = new Vector2(mouseState.X-board_offset_x-figure_size/2, mouseState.Y-board_offset_y- figure_size / 2);
-                }
-            }
-            else
-            {
-                if(index_dragged_piece!=-1) // Puszczenie pionka
-                {
-                    // dopasowanie pozycji pionka do pola
-                    piece_position[index_dragged_piece] = new Vector2((int)((piece_position[index_dragged_piece].X+ figure_size / 2) / 100)*100, (int)((piece_position[index_dragged_piece].Y+ figure_size / 2) / 100)*100);
-                    
-                    
-                    bool czy_jest_kolizja = false;
-                    // Sprawdzanie kolizji
-                    for(int i=0;i<32; i++)
-                    {
-                        if (i == index_dragged_piece) continue;
+            lapanie_myszka_figur(mouseState);
 
-                        //zbicie
-                        if (piece_position[index_dragged_piece].X == piece_position[i].X && piece_position[index_dragged_piece].Y == piece_position[i].Y)
-                        {
-                            czy_jest_kolizja = true;
-                            if((int)(index_dragged_piece/16) ==(int)( i/16)) // czy nie zbija swojego
-                            {
-                                piece_position[index_dragged_piece].X = prev_position_x; // powrot na poprzednie miejsce
-                                piece_position[index_dragged_piece].Y = prev_position_y;
-                                MediaPlayer.Play(wrong_move_sound);
-                            }
-                            else
-                            {
-                                MediaPlayer.Play(capture_sound);
-                                if (i < 16)
-                                {
-                                    miejsce_docelowe[i] = new Vector2(board.Width + board_offset_x + (i % 8) * 30, ((int)(i / 8) + 1) % 2 * 30 + 700);
-                                }
-                                else
-                                {
-                                    miejsce_docelowe[i] = new Vector2(board.Width + board_offset_x + (i % 8) * 30, ((int)((i - 16) / 8)) * 30);
-                                }
-                                animation_on[i] = true;
-                                przemieszczenie[i] =miejsce_docelowe[i]- piece_position[i];
-                                przemieszczenie[i].Normalize();
-                                
-                            }
-                        }
-                    }
-
-                    if(!czy_jest_kolizja)
-                        MediaPlayer.Play(move_sound);
-                }
-                    
-                index_dragged_piece = -1;
-            }
-
-            // funkcja ktora zwraca czy myszka jest nad figura o indeksie i
-            bool IsMouseOverObject(MouseState mouseState, int i)
-            {
-                Rectangle objectBounds = new Rectangle((int)piece_position[i].X+board_offset_x, (int)piece_position[i].Y+board_offset_y, piece[i].Width, piece[i].Height);
-                return objectBounds.Contains(mouseState.X, mouseState.Y);
-            }
-
-            
-
-            // klikanie przycisku
+            // klikanie przycisku - resetuj
             if (mouseState.LeftButton == ButtonState.Pressed && (new Rectangle((int)button1_position.X, (int)button1_position.Y, button1.Width, button1.Height)).Contains(mouseState.X, mouseState.Y))
                 Initialize_Pieces();
-
-
-            // animacja zbicia
-            float moveAmount = moveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            for (int i = 0; i < 32; i++)
-            {
-                if (animation_on[i])
-                {
-                    elapsedTime[i] += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                    if (elapsedTime[i] <= animationDuration)
-                    {
-                        float t = elapsedTime[i] / animationDuration;
-                        curent_size[i] = MathHelper.Lerp(initialScale, targetScale, t);
-                    }
-                    else
-                    {
-                        // Animation complete, set the final scale
-                        curent_size[i] = targetScale;
-                    }
-                    float distance = Vector2.Distance(piece_position[i], miejsce_docelowe[i]);
-                    if (distance > moveAmount)
-                    {
-                        piece_position[i] += przemieszczenie[i] * moveAmount;
-                    }
-                    else
-                    {
-                        piece_position[i] = miejsce_docelowe[i]; // Docelowa pozycja osiągnięta
-                    }
-                }
-            }
-               
             
-           
-
-
+            // Wlaczenie animacji zbicia - dla elementow ktore sa zbite
+            figury.Where(x => x.zbity).ToList().ForEach(x => x.AnimacjaZbicia((float)gameTime.ElapsedGameTime.TotalSeconds));
+            
             base.Update(gameTime);
         }
 
@@ -230,26 +172,94 @@ namespace Szachy3
 
             // Rysowanie elementów
             _spriteBatch.Begin();
+
+            // Rysowanie planszy
             _spriteBatch.Draw(board, new Vector2(board_position.X+board_offset_x, board_position.Y+board_offset_y), Color.White);
-            rysuj_czerowne_pola(new Vector2[] {new Vector2(100,400), new Vector2(700, 100), new Vector2(700, 700) });
+           
+            // Rysowanie czerwonych pól
+            //rysuj_czerowne_pola(new Vector2[] {new Vector2(100,400), new Vector2(700, 100), new Vector2(700, 700) });
+            
+            // Rysowanie przycisku
             _spriteBatch.Draw(button1, button1_position, Color.White);
             
-
-            for (int i=0; i<32; i++)
-            {
-                _spriteBatch.Draw(piece[i], new Vector2(piece_position[i].X + board_offset_x, piece_position[i].Y + board_offset_y), null, Color.White, 0f, Vector2.Zero, curent_size[i], SpriteEffects.None, 0f);
-            }
-
-            // rysowanie pionka na samej gorze
-            if(index_dragged_piece!=-1)
-                _spriteBatch.Draw(piece[index_dragged_piece], new Vector2(piece_position[index_dragged_piece].X + board_offset_x, piece_position[index_dragged_piece].Y + board_offset_y), null, new Color(255,255,255,128));
-
+            // Rysowanie figur
+            for (int i=0; i<liczba_figur; i++)
+                rysuj_figure(figury[i]);
+            
+            // Rysowanie pionka trzymanego przez myszke na samej gorze
+            if (index_dragged_piece != -1)
+                rysuj_figure(figury[index_dragged_piece], 128);
+           
             _spriteBatch.End();
 
             base.Draw(gameTime);
         }
+        
+        public void lapanie_myszka_figur(MouseState mouseState)
+        {
+            if (mouseState.LeftButton == ButtonState.Pressed) //klikniecie mysza
+            {
+                if (index_dragged_piece == -1) //jak jeszcze niczego nie trzyma
+                {
+                    // Wybieranie figury nad ktora jest myszka i ustawianie indexu i prev_position
+                    var el = figury.Select((figura, index) => new {  Index = index, Figura = figura }).FirstOrDefault( x => x.Figura.IsMouseOver(mouseState));
+                    if(el!=null)
+                    {
+                        index_dragged_piece = el.Index;
+                        prev_position = el.Figura.position;
+                    }
+                   
+                }
+                else // jak trzyma figure -> aktualizuj pozycje pionka
+                    figury[index_dragged_piece].position = new Vector2(mouseState.X - board_offset_x - Piece.orginal_piece_size / 2, mouseState.Y - board_offset_y - Piece.orginal_piece_size / 2);
+                
+            }
+            else // przycisk myszy nie klikniety
+            {
+                if (index_dragged_piece != -1) // Puszczenie pionka
+                {
+                    // dopasowanie pozycji pionka do pola po puszczeniu
+                    figury[index_dragged_piece].position = new Vector2((int)((figury[index_dragged_piece].position.X + Piece.orginal_piece_size / 2) / 100) * 100, (int)((figury[index_dragged_piece].position.Y + Piece.orginal_piece_size / 2) / 100) * 100);
 
+                    // szukanie czy na polu postawionego pionka jest jakis inny
+                    Piece zbita=figury.FirstOrDefault(x => x.position == figury[index_dragged_piece].position && x.id != figury[index_dragged_piece].id);
+                    
+                    if(zbita==null) // puste pole
+                        MediaPlayer.Play(move_sound);
+                    else //pole z figura
+                    {
+                        if (zbita.kolor == figury[index_dragged_piece].kolor) // pole z wlasna figura
+                        {
+                            figury[index_dragged_piece].position = prev_position; // powrot na poprzednie miejsce
+                            MediaPlayer.Play(wrong_move_sound);
+                        }
+                        else // pole z figura przeciwnika
+                            zbicie_przeciwnika(zbita);  
+                    }
+                    
+                        
+                }
 
+                index_dragged_piece = -1;
+            }
+        }
+        public void zbicie_przeciwnika(Piece zbity)
+        {
+            MediaPlayer.Play(capture_sound);
+            if (zbity.kolor == Kolor_figury.WHITE)
+            {
+                zbity.miejsce_docelowe = new Vector2(board.Width+board_offset_x + (zbite_biale%6)*30, board.Height - 30*(1+ ((int)(zbite_biale/6)) )   );
+                zbite_biale++;
+            }
+            else
+            {
+                zbity.miejsce_docelowe = new Vector2(board.Width + board_offset_x + (zbite_czarne % 6) * 30,   30 *  ((int)(zbite_czarne / 6)));
+                zbite_czarne++;
+            }
+            zbity.zbity = true;
+            zbity.przemieszczenie = zbity.miejsce_docelowe - zbity.position;
+            zbity.przemieszczenie.Normalize();
+        }
         protected void Initialize_Board()
         {
             board = Content.Load<Texture2D>("board");
@@ -257,52 +267,67 @@ namespace Szachy3
         }
         protected void Initialize_Pieces()
         {
-            piece[0] = Content.Load<Texture2D>("wR");
-            piece[1] = Content.Load<Texture2D>("wN");
-            piece[2] = Content.Load<Texture2D>("wB");
-            piece[3] = Content.Load<Texture2D>("wQ");
-            piece[4] = Content.Load<Texture2D>("wK");
-            piece[5] = Content.Load<Texture2D>("wB");
-            piece[6] = Content.Load<Texture2D>("wN");
-            piece[7] = Content.Load<Texture2D>("wR");
+            zbite_biale = 0;
+            zbite_czarne = 0;
+            liczba_figur = 32;
+
+            figury = new Piece[liczba_figur];
+
+            figury[0] = new Piece(Content.Load<Texture2D>("wR"));
+            figury[1] = new Piece(Content.Load<Texture2D>("wN"));
+            figury[2] = new Piece(Content.Load<Texture2D>("wB"));
+            figury[3] = new Piece(Content.Load<Texture2D>("wQ"));
+            figury[4] = new Piece(Content.Load<Texture2D>("wK"));
+            figury[5] = new Piece(Content.Load<Texture2D>("wB"));
+            figury[6] = new Piece(Content.Load<Texture2D>("wN"));
+            figury[7] = new Piece(Content.Load<Texture2D>("wR"));
+
+           
 
             for (int i = 8; i < 16; i++)
             {
-                piece[i] = Content.Load<Texture2D>("wP");
+                figury[i] = new Piece(Content.Load<Texture2D>("wP"));
             }
 
-            piece[16] = Content.Load<Texture2D>("bR");
-            piece[17] = Content.Load<Texture2D>("bN");
-            piece[18] = Content.Load<Texture2D>("bB");
-            piece[19] = Content.Load<Texture2D>("bQ");
-            piece[20] = Content.Load<Texture2D>("bK");
-            piece[21] = Content.Load<Texture2D>("bB");
-            piece[22] = Content.Load<Texture2D>("bN");
-            piece[23] = Content.Load<Texture2D>("bR");
+            figury[16] = new Piece(Content.Load<Texture2D>("bR"));
+            figury[17] = new Piece(Content.Load<Texture2D>("bN"));
+            figury[18] = new Piece(Content.Load<Texture2D>("bB"));
+            figury[19] = new Piece(Content.Load<Texture2D>("bQ"));
+            figury[20] = new Piece(Content.Load<Texture2D>("bK"));
+            figury[21] = new Piece(Content.Load<Texture2D>("bB"));
+            figury[22] = new Piece(Content.Load<Texture2D>("bN"));
+            figury[23] = new Piece(Content.Load<Texture2D>("bR"));
+            
 
-            for (int i = 24; i < 32; i++)
+            for (int i = 24; i < liczba_figur; i++)
             {
-                piece[i] = Content.Load<Texture2D>("bP");
+                figury[i] = new Piece(Content.Load<Texture2D>("bP"));
             }
 
+            // Pozycje na planszy
             for (int i = 0; i < 16; i++)
-            {
-                piece_position[i] = new Vector2(100 * (i % 8), (((int)i / 8) + 1) % 2 * 100 + 600);
-            }
-
-            for (int i = 16; i < 32; i++)
-            {
-                piece_position[i] = new Vector2(100 * (i % 8), ((int)(i / 8) - 2) * 100);
-            }
+                figury[i].position=new Vector2(100 * (i % 8), (((int)i / 8) + 1) % 2 * 100 + 600);
+            
+            for (int i = 16; i < liczba_figur; i++)
+                figury[i].position= new Vector2(100 * (i % 8), ((int)(i / 8) - 2) * 100);
+            
 
             for(int i=0; i<32; i++)
             {
-                elapsedTime[i] = 0;
-                curent_size[i] = 1;
-                animation_on[i] = false;
+                figury[i].kolor = (i < 16) ? Kolor_figury.WHITE : Kolor_figury.BLACK;
             }
         }
-
+        protected void Initialize_Sounds()
+        {
+            this.move_sound = Content.Load<Song>("tech_sound");
+            this.wrong_move_sound = Content.Load<Song>("sound2");
+            this.capture_sound = Content.Load<Song>("explo_sound");
+        }
+        protected void Initialize_Buttons()
+        {
+            button1 = Content.Load<Texture2D>("resetuj");
+            button1_position = new Vector2(button1_start_position_x, button1_start_position_y);
+        }
         protected void rysuj_czerowne_pola(Vector2[] pola)
         {
             for(int i=0; i< pola.Length; i++) 
@@ -313,6 +338,11 @@ namespace Szachy3
 
             }
         }
+        protected void rysuj_figure(Piece p, int transparency=255)
+        {
+            _spriteBatch.Draw(p.picture, new Vector2(p.position.X + board_offset_x, p.position.Y + board_offset_y), null, new Color(255,255,255,transparency), 0f, Vector2.Zero, p.curent_size, SpriteEffects.None, 0f);
+        }
+        
     }
-    
+
 }

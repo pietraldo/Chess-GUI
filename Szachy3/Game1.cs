@@ -116,7 +116,7 @@ namespace Szachy3
         static float animationDuration = 0.2f;    // Animation duration in seconds
         static float moveSpeed = 5000.0f;
 
-        Piece pionek;
+        
 
         public Game1()
         {
@@ -131,7 +131,7 @@ namespace Szachy3
         { 
             Initialize_Sounds();
             Initialize_Board();
-            Initialize_Pieces();
+            Initialize_Pieces("2b2bnr/pkpp1ppp/1kkq4/1pn1p3/r2PP1K1/P1qP2B1/PB1P1P1P/RN1Q2NR w HAh - 0 2");
             Initialize_Buttons();
  
             base.Initialize();
@@ -265,56 +265,85 @@ namespace Szachy3
             board = Content.Load<Texture2D>("board");
             board_position = new Vector2(board_start_position_x, board_start_position_y);
         }
-        protected void Initialize_Pieces()
+        protected void Initialize_Pieces(string FEN= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1")
         {
             zbite_biale = 0;
             zbite_czarne = 0;
-            liczba_figur = 32;
+
+            liczba_figur = 64;
+            FEN = FEN.Split(' ')[0];
+            FEN.Where(x => x - '0' >= 0 && x - '0' <= 9).ToList().ForEach(x => { liczba_figur -= (x - '0');  });
 
             figury = new Piece[liczba_figur];
-
-            figury[0] = new Piece(Content.Load<Texture2D>("wR"));
-            figury[1] = new Piece(Content.Load<Texture2D>("wN"));
-            figury[2] = new Piece(Content.Load<Texture2D>("wB"));
-            figury[3] = new Piece(Content.Load<Texture2D>("wQ"));
-            figury[4] = new Piece(Content.Load<Texture2D>("wK"));
-            figury[5] = new Piece(Content.Load<Texture2D>("wB"));
-            figury[6] = new Piece(Content.Load<Texture2D>("wN"));
-            figury[7] = new Piece(Content.Load<Texture2D>("wR"));
-
-           
-
-            for (int i = 8; i < 16; i++)
+            int pozycja_na_planszy = 0;
+            int nr_figury = 0;
+            for(int i=0; i<FEN.Length; i++)
             {
-                figury[i] = new Piece(Content.Load<Texture2D>("wP"));
+                switch(FEN[i])
+                {
+                    case 'r':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bR"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'b':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bB"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'k':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bK"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'q':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bQ"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'p':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bP"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'n':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("bN"));
+                        zainicjuj(Kolor_figury.BLACK);
+                        break;
+                    case 'N':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wN"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case 'B':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wB"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case 'K':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wK"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case 'Q':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wQ"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case 'R':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wR"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case 'P':
+                        figury[nr_figury++] = new Piece(Content.Load<Texture2D>("wP"));
+                        zainicjuj(Kolor_figury.WHITE);
+                        break;
+                    case '/':
+                        break;
+                    default:
+                        pozycja_na_planszy += (FEN[i] - '0');
+                        break;
+
+                }
             }
 
-            figury[16] = new Piece(Content.Load<Texture2D>("bR"));
-            figury[17] = new Piece(Content.Load<Texture2D>("bN"));
-            figury[18] = new Piece(Content.Load<Texture2D>("bB"));
-            figury[19] = new Piece(Content.Load<Texture2D>("bQ"));
-            figury[20] = new Piece(Content.Load<Texture2D>("bK"));
-            figury[21] = new Piece(Content.Load<Texture2D>("bB"));
-            figury[22] = new Piece(Content.Load<Texture2D>("bN"));
-            figury[23] = new Piece(Content.Load<Texture2D>("bR"));
-            
-
-            for (int i = 24; i < liczba_figur; i++)
+            void zainicjuj(Kolor_figury kol)
             {
-                figury[i] = new Piece(Content.Load<Texture2D>("bP"));
-            }
-
-            // Pozycje na planszy
-            for (int i = 0; i < 16; i++)
-                figury[i].position=new Vector2(100 * (i % 8), (((int)i / 8) + 1) % 2 * 100 + 600);
-            
-            for (int i = 16; i < liczba_figur; i++)
-                figury[i].position= new Vector2(100 * (i % 8), ((int)(i / 8) - 2) * 100);
-            
-
-            for(int i=0; i<32; i++)
-            {
-                figury[i].kolor = (i < 16) ? Kolor_figury.WHITE : Kolor_figury.BLACK;
+                Debug.WriteLine(figury);
+                figury[nr_figury-1].kolor = kol;
+                figury[nr_figury-1].position = new Vector2(pozycja_na_planszy % 8 * 100, (int)(pozycja_na_planszy / 8) * 100);
+                pozycja_na_planszy++;
             }
         }
         protected void Initialize_Sounds()

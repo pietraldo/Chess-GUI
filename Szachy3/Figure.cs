@@ -112,22 +112,32 @@ namespace Szachy3
         public override int GetPoints() { return 5; }
         public  override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
+            Moves2(b, i, j, ruchy) ;
+        }
+        public static void Moves2(Board b, int i, int j, List<Move> ruchy)
+        {
+            for (int k = j + 1; k< 8 && dodaj(i, k); k++) ;
+
+            for (int k = j - 1; k >= 0 && dodaj(i, k); k--) ;
             
-            for(int k=j+1; k < 8 && b.plansza[i,k] == null ; k++)
+            for (int k = i + 1; k< 8 && dodaj(k, j); k++) ;
+            
+            for (int k = i - 1; k >= 0 && dodaj(k, j); k--) ;
+
+            bool dodaj(int i2, int j2)
             {
-                ruchy.Add(new Move(i,j,i,k));
-            }
-            for (int k = j-1; k >= 0 && b.plansza[i, k] == null; k--)
-            {
-                ruchy.Add(new Move(i, j, i, k));
-            }
-            for (int k = i+1; k < 8 && b.plansza[k,j] == null; k++)
-            {
-                ruchy.Add(new Move(i, j, k, j));
-            }
-            for (int k = i-1; k >= 0 && b.plansza[k, j]==null; k--)
-            {
-                ruchy.Add(new Move(i, j, k, j));
+                if (b.plansza[i2, j2] == null)
+                {
+                    ruchy.Add(new Move(i, j, i2, j2));
+                    return true;
+                }
+                else if (b.plansza[i2, j2].kolor != b.plansza[i, j].kolor)
+                {
+                    ruchy.Add(new Move(i, j, i2, j2));
+                    return false;
+                }
+                else
+                    return false;
             }
         }
         public override char Show()
@@ -141,7 +151,8 @@ namespace Szachy3
         public override int GetPoints() { return 9; }
         public override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
-            
+            Rook.Moves2(b, i, j, ruchy);
+            Bishop.Moves2(b, i, j, ruchy);
         }
         public override char Show()
         {
@@ -154,7 +165,35 @@ namespace Szachy3
         public override int GetPoints() { return 3; }
         public override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
-            
+            Moves2(b, i, j, ruchy);
+        }
+        public static void Moves2(Board b, int i, int j, List<Move> ruchy)
+        {
+            dodaj(-1,-1);
+            dodaj(-1,1);
+            dodaj(1,1);
+            dodaj(1,-1);
+            void dodaj(int plus_i, int plus_j)
+            {
+                int k = 1;
+                while (true)
+                {
+                    if (k * plus_i + i > 7 || k * plus_i + i < 0)
+                        break;
+                    if (k * plus_j + j > 7 || k * plus_j + j < 0)
+                        break;
+                    if (b.plansza[k * plus_i + i, k * plus_j + j]!=null && b.plansza[k * plus_i + i, k * plus_j + j].kolor == b.plansza[i, j].kolor)
+                        break;
+                    if (b.plansza[k * plus_i + i, k * plus_j + j] != null && b.plansza[k * plus_i + i, k * plus_j + j].kolor != b.plansza[i, j].kolor)
+                    {
+                        ruchy.Add(new Move(i, j, k * plus_i + i, k * plus_j + j));
+                        break;
+                    }
+                    ruchy.Add(new Move(i, j, k * plus_i + i, k * plus_j + j));
+                    k++;
+                }
+            }
+                
         }
         public override char Show()
         {
@@ -167,12 +206,35 @@ namespace Szachy3
         public override int GetPoints() { return 3; }
         public override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
-
+            Moves2(b, i, j, ruchy);
+        }
+        public static void Moves2(Board b, int i, int j, List<Move> ruchy)
+        {
+            dodaj(-2, -1);
+            dodaj(-2, 1);
+            dodaj(2, 1);
+            dodaj(2, -1);
+            dodaj(1, -2);
+            dodaj(1, 2);
+            dodaj(-1, -2);
+            dodaj(-1, 2);
+            void dodaj(int plus_i, int plus_j)
+            {
+                if(plus_i+i<8 && plus_i+i>=0 &&plus_j + j < 8 && plus_j + j >= 0)
+                {
+                    if (b.plansza[i + plus_i, j + plus_j] ==null)
+                        ruchy.Add(new Move(i, j, plus_i + i, plus_j + j));
+                    if (b.plansza[i + plus_i, j + plus_j] != null && b.plansza[i,j].kolor!= b.plansza[i+plus_i, j+plus_j].kolor)
+                        ruchy.Add(new Move(i, j, plus_i + i, plus_j + j));
+                }
+                 
+            }
         }
         public override char Show()
         {
             return (kolor == Kolor_figury.WHITE) ? 'N' : 'n';
         }
+
     }
     internal class King : Figure
     {
@@ -180,7 +242,29 @@ namespace Szachy3
         public override int GetPoints() { return 10000; }
         public override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
+            Moves2(b, i, j, ruchy);
+        }
+        public static void Moves2(Board b, int i, int j, List<Move> ruchy)
+        {
+            dodaj(1, -1);
+            dodaj(1, 1);
+            dodaj(1, 0);
+            dodaj(-1, -1);
+            dodaj(-1, 1);
+            dodaj(-1, 0);
+            dodaj(0, 1);
+            dodaj(0,-1);
+            void dodaj(int plus_i, int plus_j)
+            {
+                if (plus_i + i < 8 && plus_i + i >= 0 && plus_j + j < 8 && plus_j + j >= 0)
+                {
+                    if (b.plansza[i + plus_i, j + plus_j] == null)
+                        ruchy.Add(new Move(i, j, plus_i + i, plus_j + j));
+                    if (b.plansza[i + plus_i, j + plus_j] != null && b.plansza[i, j].kolor != b.plansza[i + plus_i, j + plus_j].kolor)
+                        ruchy.Add(new Move(i, j, plus_i + i, plus_j + j));
+                }
 
+            }
         }
         public override char Show()
         {
@@ -193,7 +277,48 @@ namespace Szachy3
         public override int GetPoints() { return 1; }
         public override void Moves(Board b, int i, int j, List<Move> ruchy)
         {
-
+            Moves2(b, i, j, ruchy);
+        }
+        public static void Moves2(Board b, int i, int j, List<Move> ruchy)
+        {
+            if (b.plansza[i, j].kolor == Kolor_figury.WHITE) // biale
+            {
+                if (i == 1 && b.plansza[i + 2, j] == null && b.plansza[i + 1, j] == null) // ruch o dwa
+                {
+                    ruchy.Add(new Move(i, j, 2 + i, j));
+                }
+                if (i + 1 < 8 && b.plansza[i + 1, j] == null) // ruch o jeden
+                {
+                    ruchy.Add(new Move(i, j, 1 + i, j));
+                }
+                if (i + 1 < 8 && j - 1 >= 0 && b.plansza[i + 1, j - 1] != null && b.plansza[i + 1, j - 1].kolor == Kolor_figury.BLACK) // ruch o bicie w lewo
+                {
+                    ruchy.Add(new Move(i, j, 1 + i, j - 1));
+                }
+                if (i + 1 < 8 && j + 1 < 8 && b.plansza[i + 1, j + 1] != null && b.plansza[i + 1, j + 1].kolor == Kolor_figury.BLACK) // ruch o bicie w prawo
+                {
+                    ruchy.Add(new Move(i, j, 1 + i, j + 1));
+                }
+            }
+            else // czarne
+            {
+                if (i == 6 && b.plansza[i - 2, j] == null && b.plansza[i - 1, j] == null) // ruch o dwa
+                {
+                    ruchy.Add(new Move(i, j, i - 2, j));
+                }
+                if (i - 1 >= 0 && b.plansza[i - 1, j] == null) // ruch o jeden
+                {
+                    ruchy.Add(new Move(i, j, i - 1, j));
+                }
+                if (i - 1 >= 0 && j - 1 >= 0 && b.plansza[i - 1, j - 1] != null && b.plansza[i - 1, j - 1].kolor == Kolor_figury.WHITE) // ruch o bicie w lewo
+                {
+                    ruchy.Add(new Move(i, j, i - 1, j - 1));
+                }
+                if (i - 1 >= 0 && j + 1 < 8 && b.plansza[i - 1, j + 1] != null && b.plansza[i - 1, j + 1].kolor == Kolor_figury.WHITE) // ruch o bicie w prawo
+                {
+                    ruchy.Add(new Move(i, j, i - 1, j + 1));
+                }
+            }
         }
         public override char Show()
         {

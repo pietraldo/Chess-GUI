@@ -77,7 +77,7 @@ namespace Szachy3
         // ustawienia
         private const int window_width = 1300;
         private const int window_height = 900;
-        private const string pozycja_startowa= "8/2R5/R5R1/2R3Kr/1r3R2/4B2P/2R2R2/8 w - - 8 37";
+        private const string pozycja_startowa= "rnbqkbnr/ppp1pp2/4p3/5p2/1P1P1P2/8/PP3PP1/RNBQKBNR w KQkq - 0 1";
         public static int board_offset_x = 50;
         public static int board_offset_y = 50;
 
@@ -205,7 +205,7 @@ namespace Szachy3
         public void zdobadz_ruchy()
         {
             Board b = new Board(figury);
-            b.Show_Board();
+            //b.Show_Board();
             Vector2 m = new Vector2(Mouse.GetState().X-board_offset_x, Mouse.GetState().Y-board_offset_y);
             
             czerwone_pola = new Vector2[0];
@@ -215,7 +215,7 @@ namespace Szachy3
            
             int[] wsp = Move.VectorToInt(m);
 
-            if (b.plansza[wsp[0], wsp[1]] != null)
+            if (wsp[0]<8 && wsp[0]>=0 && wsp[1]<8 && wsp[1]>=0 && b.plansza[wsp[0], wsp[1]] != null)
             {
                 b.plansza[wsp[0], wsp[1]].Moves(b, wsp[0], wsp[1], avible_moves);
             }
@@ -224,11 +224,10 @@ namespace Szachy3
             
             for (int i = 0; i < avible_moves.Count; i++)
             {
-                avible_moves[i].Show();
                 czerwone_pola[i] = avible_moves[i].Odwrotnie_Koniec();
-
             }
 
+            
             
 
         }
@@ -244,10 +243,7 @@ namespace Szachy3
                     {
                         if (figury[el.Index].zbity == false)
                             zdobadz_ruchy();
-                        { // lapanie pionka zbitego i restartowanie go do gry
-                            figury[el.Index].curent_size = 1;
-                            figury[el.Index].zbity = false;
-                        }
+                        
                         
                         index_dragged_piece = el.Index;
                         prev_position = el.Figura.position;
@@ -285,8 +281,11 @@ namespace Szachy3
                                 zbicie_przeciwnika(zbita);
                         }
                     }
-                    else
+                    else // zle upuszczenie figury albo w tym samym miejscu
                     {
+                        if (figury[index_dragged_piece].position!=prev_position) 
+                            MediaPlayer.Play(wrong_move_sound);
+
                         figury[index_dragged_piece].position = prev_position;
                     }
 
@@ -393,7 +392,6 @@ namespace Szachy3
 
             void zainicjuj(Kolor_figury kol)
             {
-                Debug.WriteLine(figury);
                 figury[nr_figury-1].kolor = kol;
                 figury[nr_figury-1].position = new Vector2(pozycja_na_planszy % 8 * 100, (int)(pozycja_na_planszy / 8) * 100);
                 pozycja_na_planszy++;

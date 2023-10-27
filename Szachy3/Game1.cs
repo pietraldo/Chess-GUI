@@ -31,6 +31,11 @@ namespace Szachy3
             public Vector2 przemieszczenie;
             public Vector2 miejsce_docelowe;
 
+            // do animacji promocji
+            public bool promocja = false;
+            public Vector2 position_promocji;
+            public float obrot = 0;
+
             public Piece(Texture2D tekstura)
             { 
                 picture = tekstura;
@@ -72,12 +77,81 @@ namespace Szachy3
                 else
                     position = miejsce_docelowe; // Docelowa pozycja osiągnięta
             }
+
+
+
+            private bool etap1 = false;
+            static float targetScale2 = 4f;          // Target scale 
+            private float animationDuration2=2.4f;    // Animation duration in seconds
+            private float elapsedTime2 = 0;
+            private float elapsedTime3 = 0;
+            public void AnimacjaPromocji(float time)
+            {
+                float moveSpeed2 = 500;
+                //Etap 1 powiekszenie i krecenie
+                if(!etap1)
+                {
+                    elapsedTime2 += time;
+
+                    if(elapsedTime2<=animationDuration2)
+                    {
+                        // krecenie sie
+                        obrot += MathHelper.ToRadians(4000) * time;
+                        // poruszanie
+                        przemieszczenie = new Vector2(400, 400) - position;
+                        przemieszczenie.Normalize();
+                        float moveAmount = moveSpeed2 * time;
+                        if (Vector2.Distance(new Vector2(400, 400), position) > 10)
+                                position += przemieszczenie * moveAmount;
+                        // powiekszanie
+                        float t = elapsedTime2 / animationDuration2;
+                        curent_size = MathHelper.Lerp(1f, targetScale2, t);
+                    }
+                    else
+                    {
+                        etap1 = true;
+                        obrot = 0;
+                        
+                        position = new Vector2(400-picture.Width*curent_size/2, 400-picture.Width*curent_size/2);
+                        Debug.WriteLine(position.X + " " + position.Y);
+                        moveSpeed2 = Vector2.Distance(position, position_promocji) / animationDuration2;
+                        przemieszczenie = position_promocji - position;
+                        przemieszczenie.Normalize();
+                    }
+                }
+                else
+                {
+                    picture =(kolor==Kolor_figury.WHITE)?do_promocji_w:do_promocji_b;
+                    elapsedTime3 += time;
+                    if(elapsedTime3<=animationDuration2)
+                    {
+                        // poruszanie
+                        float moveAmount = moveSpeed2 * time;
+                        if (Vector2.Distance(position_promocji, position) > moveAmount)
+                            position += przemieszczenie * moveAmount;
+                        else
+                            position = position_promocji;
+
+                        // powiekszanie
+                        float t = elapsedTime3 / animationDuration2;
+                        curent_size = MathHelper.Lerp(targetScale2, 1f, t);
+                    }
+                    else
+                    {
+                        curent_size = 1;
+                        position = position_promocji;
+                        obrot = 0;
+                        promocja = false;
+                    }
+                }
+
+            }
         }
 
         // ustawienia
         private const int window_width = 1300;
         private const int window_height = 900;
-        private const string pozycja_startowa= "rnbqkbnr/ppp1pp2/4p3/5p2/1P1P1P2/8/PP3PP1/RNBQKBNR w KQkq - 0 1";
+        private const string pozycja_startowa= "8/PPPPPPPP/8/8/8/8/pppppppp/8 w - - 0 1";
         public static int board_offset_x = 50;
         public static int board_offset_y = 50;
 
@@ -107,6 +181,7 @@ namespace Szachy3
         Song move_sound;
         Song wrong_move_sound;
         Song capture_sound;
+        Song promotion_sound;
 
         // button
         Texture2D button1;
@@ -116,8 +191,12 @@ namespace Szachy3
 
         // animation     
         static float targetScale = 0.3f;          // Target scale 
+
         static float animationDuration = 0.2f;    // Animation duration in seconds
         static float moveSpeed = 5000.0f;
+        public static Texture2D do_promocji_w;
+        public static Texture2D do_promocji_b;
+
 
         
 
@@ -139,6 +218,9 @@ namespace Szachy3
 
             zdobadz_ruchy();
 
+            do_promocji_w = Content.Load<Texture2D>("wQ");
+            do_promocji_b = Content.Load<Texture2D>("bQ");
+
             base.Initialize();
         }
 
@@ -151,8 +233,23 @@ namespace Szachy3
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)) //wychodznie klawiszami z aplikacji
                 Exit();
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Q)) // do promocji
+            {
+                do_promocji_w = Content.Load<Texture2D>("wQ");
+                do_promocji_b = Content.Load<Texture2D>("bQ");
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.R)) // do promocji
+            {
+                do_promocji_w = Content.Load<Texture2D>("wR");
+                do_promocji_b = Content.Load<Texture2D>("bR");
+            }
+            if (Keyboard.GetState().IsKeyDown(Keys.N)) // do promocji
+            {
+                do_promocji_w = Content.Load<Texture2D>("wN");
+                do_promocji_b = Content.Load<Texture2D>("bN");
+            }
             
-           
 
             MouseState mouseState = Mouse.GetState();
 
@@ -168,7 +265,10 @@ namespace Szachy3
             
             // Wlaczenie animacji zbicia - dla elementow ktore sa zbite
             figury.Where(x => x.zbity).ToList().ForEach(x => x.AnimacjaZbicia((float)gameTime.ElapsedGameTime.TotalSeconds));
-            
+
+            // Wlaczenie animacji promocji 
+            figury.Where(x => x.promocja).ToList().ForEach(x => x.AnimacjaPromocji((float)gameTime.ElapsedGameTime.TotalSeconds));
+
             base.Update(gameTime);
         }
 
@@ -187,15 +287,23 @@ namespace Szachy3
             
             // Rysowanie przycisku
             _spriteBatch.Draw(button1, button1_position, Color.White);
-            
+
             // Rysowanie figur
-            for (int i=0; i<liczba_figur; i++)
-                rysuj_figure(figury[i]);
+            for (int i = 0; i < liczba_figur; i++)
+            {
+                if (figury[i].promocja) continue;
+                    rysuj_figure(figury[i]);
+            }
+                
             
             // Rysowanie pionka trzymanego przez myszke na samej gorze
             if (index_dragged_piece != -1)
                 rysuj_figure(figury[index_dragged_piece], 128);
-           
+
+            var promowany = figury.Where(x => x.promocja);
+            foreach (Piece a in promowany)
+                rysuj_figure(a,255);
+
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -290,8 +398,22 @@ namespace Szachy3
                     }
 
                     czerwone_pola = new Vector2[0]; //resetowanie kolorowania 
-                }
 
+                    //promocja
+                    if (figury[index_dragged_piece].picture.Name[1] == 'P' && figury[index_dragged_piece].kolor == Kolor_figury.WHITE && figury[index_dragged_piece].position.Y == 0)
+                    {
+                        figury[index_dragged_piece].position_promocji = figury[index_dragged_piece].position;
+                        figury[index_dragged_piece].promocja=true;
+                        MediaPlayer.Play(promotion_sound);
+                    }
+                    else if (figury[index_dragged_piece].picture.Name[1] == 'P' && figury[index_dragged_piece].kolor == Kolor_figury.BLACK && figury[index_dragged_piece].position.Y == 700)
+                    {
+                        figury[index_dragged_piece].position_promocji = figury[index_dragged_piece].position;
+                        figury[index_dragged_piece].promocja = true;
+                        MediaPlayer.Play(promotion_sound);
+                    }
+                }
+                
                 index_dragged_piece = -1;
             }
         }
@@ -402,6 +524,7 @@ namespace Szachy3
             this.move_sound = Content.Load<Song>("tech_sound");
             this.wrong_move_sound = Content.Load<Song>("sound2");
             this.capture_sound = Content.Load<Song>("explo_sound");
+            this.promotion_sound = Content.Load<Song>("win3");
         }
         protected void Initialize_Buttons()
         {
@@ -420,7 +543,14 @@ namespace Szachy3
         }
         protected void rysuj_figure(Piece p, int transparency=255)
         {
-            _spriteBatch.Draw(p.picture, new Vector2(p.position.X + board_offset_x, p.position.Y + board_offset_y), null, new Color(255,255,255,transparency), 0f, Vector2.Zero, p.curent_size, SpriteEffects.None, 0f);
+            if (p.obrot == 0)
+                _spriteBatch.Draw(p.picture, new Vector2(p.position.X + board_offset_x, p.position.Y + board_offset_y), null, new Color(255,255,255,transparency), p.obrot,Vector2.Zero, p.curent_size, SpriteEffects.None, 0f);
+            else
+            {
+                _spriteBatch.Draw(p.picture, new Vector2(p.position.X + board_offset_x, p.position.Y + board_offset_y), null, new Color(255,255,255,transparency),   p.obrot, new Vector2(p.picture.Width / 2, p.picture.Height / 2), p.curent_size, SpriteEffects.None, 0f);
+
+                //Debug.WriteLine(p.obrot);
+            }
         }
         
     }

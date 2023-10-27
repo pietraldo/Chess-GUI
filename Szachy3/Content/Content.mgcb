@@ -175,6 +175,24 @@
 /processorParam:TextureFormat=Color
 /build:wB.png
 
+#begin win.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:win.mp3
+
+#begin win2.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:win2.mp3
+
+#begin win3.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:win3.mp3
+
 #begin wK.png
 /importer:TextureImporter
 /processor:TextureProcessor

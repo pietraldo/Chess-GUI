@@ -11,9 +11,15 @@ namespace Szachy3
 {
     internal class Board
     {
-        public Figure[,] plansza = new Figure[8,8];
-        public Board(Game1.Piece[] figury)
+        public Figure[,] plansza = new Figure[8, 8];
+        private List<Move> historia;
+
+        public bool[] roszady_bialych = new bool[]{true, true};
+        public bool[] roszady_czarnych = new bool[]{true, true};
+
+        public Board(Game1.Piece[] figury, List<Move> historia=null)
         {
+            this.historia = (historia == null) ? new List<Move>() : historia;
             foreach(Game1.Piece figura in figury)
             {
                 if (figura.zbity) continue;
@@ -39,8 +45,30 @@ namespace Szachy3
                         plansza[7 - (int)(figura.position.Y / 100), (int)(figura.position.X / 100)] = new Queen(k);
                         break;
                 }
-               
             }
+
+            for(int i=0;i<historia.Count;i++)
+            {
+                if (historia[i].i1 == 0 && historia[i].j1 == 0)
+                    roszady_bialych[0] = false;
+                if (historia[i].i1 == 0 && historia[i].j1 == 7)
+                    roszady_bialych[1] = false;
+                if (historia[i].i1==0 && historia[i].j1==4)
+                {
+                    roszady_bialych[0] = false;
+                    roszady_bialych[1] = false;
+                }
+                if (historia[i].i1 == 7 && historia[i].j1 == 0)
+                    roszady_czarnych[0] = false;
+                if (historia[i].i1 == 7 && historia[i].j1 == 7)
+                    roszady_czarnych[1] = false;
+                if (historia[i].i1 == 7 && historia[i].j1 == 4)
+                {
+                    roszady_bialych[0] = false;
+                    roszady_czarnych[1] = false;
+                }
+            }
+
         }
 
         public void Show_Board()
@@ -56,6 +84,46 @@ namespace Szachy3
                 }
                 Debug.WriteLine("");
             }
+        }
+
+        public void Show_History()
+        {
+            Debug.WriteLine(historia.Count);
+            
+            for(int i=0; i<historia.Count; i++)
+            {
+                historia[i].Show();
+            }
+        }
+
+        public bool czy_atak_na_pole(int i1, int j1, Kolor_figury kol) // czy kolor atakuje dane pole
+        {
+            // dodajmy na chwile figure
+            plansza[i1, j1] = new Pawn((kol==Kolor_figury.WHITE)?Kolor_figury.BLACK:Kolor_figury.WHITE);
+            for(int i=0;i<8; i++)
+            {
+                for(int j=0; j<8; j++)
+                {
+                    if (plansza[i,j]!= null && plansza[i,j].kolor == kol)
+                    {
+                        List<Move> ruchy= new List<Move>();
+                        plansza[i, j].Moves(this, i, j, ruchy);
+
+                       
+
+                        bool odp=ruchy.Any(x => x.i2 == i1 && x.j2 == j1);
+                        if(odp)
+                        {
+                            plansza[i1, j1] = null;
+                            return true;
+                        }
+                    }
+                }
+                
+
+            }
+            plansza[i1, j1] = null;
+            return false;
         }
     }
     internal class Move
@@ -264,6 +332,28 @@ namespace Szachy3
                         ruchy.Add(new Move(i, j, plus_i + i, plus_j + j));
                 }
 
+            }
+            if (b.plansza[i,j].kolor==Kolor_figury.WHITE)
+            {
+                if (b.roszady_bialych[0] && b.plansza[0,3]==null && b.plansza[0, 2] == null  && b.plansza[0, 1] == null && !b.czy_atak_na_pole(0,3,Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 2, Kolor_figury.BLACK))
+                {
+                    ruchy.Add(new Move(i, j, 0,2));
+                }
+                if (b.roszady_bialych[1] && b.plansza[0, 5] == null && b.plansza[0, 6] == null  && !b.czy_atak_na_pole(0, 5, Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 6, Kolor_figury.BLACK))
+                {
+                    ruchy.Add(new Move(i, j, 0, 6));
+                }
+            }
+            if (b.plansza[i, j].kolor == Kolor_figury.BLACK)
+            {
+                if (b.roszady_czarnych[0] && b.plansza[7, 3] == null && b.plansza[7, 2] == null && b.plansza[7, 1] == null && !b.czy_atak_na_pole(7, 3, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 2, Kolor_figury.WHITE))
+                {
+                    ruchy.Add(new Move(i, j, 7, 2));
+                }
+                if (b.roszady_czarnych[1] && b.plansza[7, 5] == null && b.plansza[7, 6] == null && !b.czy_atak_na_pole(7, 5, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 6, Kolor_figury.WHITE))
+                {
+                    ruchy.Add(new Move(i, j, 7, 6));
+                }
             }
         }
         public override char Show()

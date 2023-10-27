@@ -4,15 +4,17 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Mime;
 
 namespace Szachy3
 {
+    public enum Kolor_figury { WHITE, BLACK };
     public class Game1 : Game
     {
-        public enum Kolor_figury { WHITE, BLACK};
+        
         public class Piece
         {
             public static readonly int orginal_piece_size = 100;
@@ -72,21 +74,21 @@ namespace Szachy3
             }
         }
 
-
         // ustawienia
         private const int window_width = 1300;
         private const int window_height = 900;
-
+        private const string pozycja_startowa= "8/2R5/R5R1/2R3Kr/1r3R2/4B2P/2R2R2/8 w - - 8 37";
+        public static int board_offset_x = 50;
+        public static int board_offset_y = 50;
 
         // board
         Texture2D board;
         Vector2 board_position;
         int board_start_position_x = 0;
         int board_start_position_y = 0;
-        public static int board_offset_x = 50;
-        public static int board_offset_y = 50;
         public int zbite_biale=0;
         public int zbite_czarne=0;
+        public Vector2[] czerwone_pola;
 
         // tablica figur
         public Piece[] figury;
@@ -95,6 +97,7 @@ namespace Szachy3
         // mouse dragg piece
         public int index_dragged_piece = -1;
         public Vector2 prev_position;
+        
       
         // game
         private GraphicsDeviceManager _graphics;
@@ -131,9 +134,11 @@ namespace Szachy3
         { 
             Initialize_Sounds();
             Initialize_Board();
-            Initialize_Pieces("2b2bnr/pkpp1ppp/1kkq4/1pn1p3/r2PP1K1/P1qP2B1/PB1P1P1P/RN1Q2NR w HAh - 0 2");
+            Initialize_Pieces(pozycja_startowa);
             Initialize_Buttons();
- 
+
+            zdobadz_ruchy();
+
             base.Initialize();
         }
 
@@ -147,6 +152,7 @@ namespace Szachy3
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)) //wychodznie klawiszami z aplikacji
                 Exit();
             
+           
 
             MouseState mouseState = Mouse.GetState();
 
@@ -177,7 +183,7 @@ namespace Szachy3
             _spriteBatch.Draw(board, new Vector2(board_position.X+board_offset_x, board_position.Y+board_offset_y), Color.White);
            
             // Rysowanie czerwonych pól
-            //rysuj_czerowne_pola(new Vector2[] {new Vector2(100,400), new Vector2(700, 100), new Vector2(700, 700) });
+            rysuj_czerowne_pola(czerwone_pola);
             
             // Rysowanie przycisku
             _spriteBatch.Draw(button1, button1_position, Color.White);
@@ -195,6 +201,37 @@ namespace Szachy3
             base.Draw(gameTime);
         }
         
+
+        public void zdobadz_ruchy()
+        {
+            Board b = new Board(figury);
+            b.Show_Board();
+            Vector2 m = new Vector2(Mouse.GetState().X-board_offset_x, Mouse.GetState().Y-board_offset_y);
+            
+            czerwone_pola = new Vector2[0];
+            List<Move> avible_moves = new List<Move>();
+
+
+           
+            int[] wsp = Move.VectorToInt(m);
+
+            if (b.plansza[wsp[0], wsp[1]] != null)
+            {
+                b.plansza[wsp[0], wsp[1]].Moves(b, wsp[0], wsp[1], avible_moves);
+            }
+
+            czerwone_pola = new Vector2[avible_moves.Count];
+            
+            for (int i = 0; i < avible_moves.Count; i++)
+            {
+                avible_moves[i].Show();
+                czerwone_pola[i] = avible_moves[i].Odwrotnie_Koniec();
+
+            }
+
+            
+
+        }
         public void lapanie_myszka_figur(MouseState mouseState)
         {
             if (mouseState.LeftButton == ButtonState.Pressed) //klikniecie mysza
@@ -205,39 +242,55 @@ namespace Szachy3
                     var el = figury.Select((figura, index) => new {  Index = index, Figura = figura }).FirstOrDefault( x => x.Figura.IsMouseOver(mouseState));
                     if(el!=null)
                     {
+                        if (figury[el.Index].zbity == false)
+                            zdobadz_ruchy();
+                        { // lapanie pionka zbitego i restartowanie go do gry
+                            figury[el.Index].curent_size = 1;
+                            figury[el.Index].zbity = false;
+                        }
+                        
                         index_dragged_piece = el.Index;
                         prev_position = el.Figura.position;
+                        
                     }
                    
                 }
                 else // jak trzyma figure -> aktualizuj pozycje pionka
                     figury[index_dragged_piece].position = new Vector2(mouseState.X - board_offset_x - Piece.orginal_piece_size / 2, mouseState.Y - board_offset_y - Piece.orginal_piece_size / 2);
-                
+               
             }
             else // przycisk myszy nie klikniety
             {
                 if (index_dragged_piece != -1) // Puszczenie pionka
                 {
+                    
                     // dopasowanie pozycji pionka do pola po puszczeniu
                     figury[index_dragged_piece].position = new Vector2((int)((figury[index_dragged_piece].position.X + Piece.orginal_piece_size / 2) / 100) * 100, (int)((figury[index_dragged_piece].position.Y + Piece.orginal_piece_size / 2) / 100) * 100);
-
-                    // szukanie czy na polu postawionego pionka jest jakis inny
-                    Piece zbita=figury.FirstOrDefault(x => x.position == figury[index_dragged_piece].position && x.id != figury[index_dragged_piece].id);
-                    
-                    if(zbita==null) // puste pole
-                        MediaPlayer.Play(move_sound);
-                    else //pole z figura
+                   
+                    if(czerwone_pola!=null&& czerwone_pola.Any(x => x == figury[index_dragged_piece].position)) // czy ta figura moze sie na to pole ruszyc
                     {
-                        if (zbita.kolor == figury[index_dragged_piece].kolor) // pole z wlasna figura
+                        // szukanie czy na polu postawionego pionka jest jakis inny
+                        Piece zbita = figury.FirstOrDefault(x => x.position == figury[index_dragged_piece].position && x.id != figury[index_dragged_piece].id);
+
+                        if (zbita == null) // puste pole
+                            MediaPlayer.Play(move_sound);
+                        else //pole z figura
                         {
-                            figury[index_dragged_piece].position = prev_position; // powrot na poprzednie miejsce
-                            MediaPlayer.Play(wrong_move_sound);
+                            if (zbita.kolor == figury[index_dragged_piece].kolor) // pole z wlasna figura
+                            {
+                                figury[index_dragged_piece].position = prev_position; // powrot na poprzednie miejsce
+                                MediaPlayer.Play(wrong_move_sound);
+                            }
+                            else // pole z figura przeciwnika
+                                zbicie_przeciwnika(zbita);
                         }
-                        else // pole z figura przeciwnika
-                            zbicie_przeciwnika(zbita);  
                     }
-                    
-                        
+                    else
+                    {
+                        figury[index_dragged_piece].position = prev_position;
+                    }
+
+                    czerwone_pola = new Vector2[0]; //resetowanie kolorowania 
                 }
 
                 index_dragged_piece = -1;
@@ -361,9 +414,9 @@ namespace Szachy3
         {
             for(int i=0; i< pola.Length; i++) 
             {
-                Texture2D czerwony = Content.Load<Texture2D>("czerwone");
+                Texture2D czerwony = Content.Load<Texture2D>("niebieski");
 
-                _spriteBatch.Draw(czerwony, new Vector2(pola[i].X + board_offset_x, pola[i].Y+board_offset_y), new Color(255, 255, 255, 128)); // 50% przezroczystości
+                _spriteBatch.Draw(czerwony, new Vector2(pola[i].X + board_offset_x, pola[i].Y+board_offset_y), new Color(255,255,255,128)); // 50% przezroczystości
 
             }
         }

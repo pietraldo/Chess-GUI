@@ -151,7 +151,7 @@ namespace Szachy3
         // ustawienia
         private const int window_width = 1300;
         private const int window_height = 900;
-        private const string pozycja_startowa= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        private const string pozycja_startowa= "rnb1kbnr/pppp1ppp/3p4/8/8/4q3/PPPPQ1PP/RNB1KBNR w KQkq - 0 1";
         public static int board_offset_x = 50;
         public static int board_offset_y = 50;
 
@@ -163,7 +163,7 @@ namespace Szachy3
         public int zbite_biale=0;
         public int zbite_czarne=0;
         public bool block_mouse = false;
-        public bool wlaczyc_kolejnosc = false;
+        public bool wylaczyc_kolejnosc = true; 
         public Kolor_figury czyja_kolej=Kolor_figury.WHITE;
         public bool mute = true;
         public bool obroc_plansze = false;
@@ -334,7 +334,7 @@ namespace Szachy3
 
             if (wsp[0]<8 && wsp[0]>=0 && wsp[1]<8 && wsp[1]>=0 && b.plansza[wsp[0], wsp[1]] != null)
             {
-                b.plansza[wsp[0], wsp[1]].Moves(b, wsp[0], wsp[1], avible_moves);
+                b.plansza[wsp[0], wsp[1]].Moves(b, wsp[0], wsp[1], avible_moves,true);
             }
 
             mozliwe_posuniecia = avible_moves;
@@ -349,8 +349,9 @@ namespace Szachy3
                 {
                     // Wybieranie figury nad ktora jest myszka i ustawianie indexu i prev_position
                     var el = figury.Select((figura, index) => new {  Index = index, Figura = figura }).FirstOrDefault( x => x.Figura.IsMouseOver(mouseState));
-                    if(el!=null && (figury[el.Index].kolor==czyja_kolej || !wlaczyc_kolejnosc))
+                    if(el!=null && (figury[el.Index].kolor==czyja_kolej || wylaczyc_kolejnosc))
                     {
+                        wyswietl_historie();
                         if (figury[el.Index].zbity == false)
                             zdobadz_ruchy();
 
@@ -642,7 +643,5 @@ namespace Szachy3
         }
 
     }
-
-    
 
 }

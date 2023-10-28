@@ -149,12 +149,13 @@ namespace Szachy3
         }
 
         // ustawienia
-        private const int window_width = 1300;
-        private const int window_height = 900;
-        private const string pozycja_startowa= "rnb1kbnr/pppp1ppp/3p4/8/8/4q3/PPPPQ1PP/RNB1KBNR w KQkq - 0 1";
-        public static int board_offset_x = 50;
-        public static int board_offset_y = 50;
-
+        
+        private const string pozycja_startowa= "2k5/4Q3/3K4/8/8/8/8/8 w - - 0 1";
+        public bool block_mouse = false;
+        public bool wylaczyc_kolejnosc = false;
+        public Kolor_figury czyja_kolej = Kolor_figury.WHITE;
+        public bool mute = false;
+        
         // board
         Texture2D board;
         Vector2 board_position;
@@ -162,11 +163,11 @@ namespace Szachy3
         int board_start_position_y = 0;
         public int zbite_biale=0;
         public int zbite_czarne=0;
-        public bool block_mouse = false;
-        public bool wylaczyc_kolejnosc = true; 
-        public Kolor_figury czyja_kolej=Kolor_figury.WHITE;
-        public bool mute = true;
         public bool obroc_plansze = false;
+        private const int window_width = 1300;
+        private const int window_height = 900;
+        public static int board_offset_x = 50;
+        public static int board_offset_y = 50;
 
         private List<Move> mozliwe_posuniecia= new List<Move>();
         private List<Move> historia = new List<Move>();
@@ -202,8 +203,11 @@ namespace Szachy3
         public static Texture2D do_promocji_w;
         public static Texture2D do_promocji_b;
 
-
-        
+        // animacja matowania
+        bool koniec_gry = false;
+        Piece krol_matowany;
+        int numer_obrazka = 1;
+        int animation_end_speed = 10;
 
         public Game1()
         {
@@ -342,6 +346,11 @@ namespace Szachy3
         }
         public void lapanie_myszka_figur(MouseState mouseState)
         {
+            if (koniec_gry)
+            {
+                animacja_konca_gry();
+                return;
+            }
             if (block_mouse) return;
             if (mouseState.LeftButton == ButtonState.Pressed) //klikniecie mysza
             {
@@ -404,6 +413,8 @@ namespace Szachy3
 
                         // zmiana gracza
                         czyja_kolej = (czyja_kolej == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE;
+                        
+                        koniec_gry=czy_koniec_gry();
                         wyswietl_historie();
                     }
                     else // zle upuszczenie figury albo w tym samym miejscu
@@ -640,6 +651,57 @@ namespace Szachy3
             Initialize_Pieces();
             historia = new List<Move>();
             czyja_kolej = Kolor_figury.WHITE;
+            block_mouse = false;
+            koniec_gry = false;
+            numer_obrazka = 0;
+        }
+
+        public bool czy_koniec_gry()
+        {
+            if (wylaczyc_kolejnosc) return false;
+            Board b = new Board(figury, historia);
+            int i_krola = -1;
+            int j_krola = -1;
+            List<Move> ruchy = new List<Move>();
+            for(int i=0; i<8; i++)
+            {
+                for(int j=0; j<8; j++)
+                {
+                    if (b.plansza[i, j]!=null && b.plansza[i,j].kolor==czyja_kolej)
+                    {
+                        b.plansza[i, j].Moves(b,i,j,ruchy,true);
+                        if (ruchy.Count != 0)
+                            return false;
+                    }
+                    if(b.plansza[i, j] != null && b.plansza[i, j].kolor == czyja_kolej && b.plansza[i, j].GetPoints()==10000)
+                    {
+                        i_krola = i;
+                        j_krola = j;
+                    }
+                }
+            }
+            bool czy_pat=!b.czy_atak_na_pole(i_krola, j_krola, (czyja_kolej == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE);
+
+            if (czy_pat)
+            {
+                MediaPlayer.Play(wrong_move_sound);
+            }
+            else // mat 
+            {
+                krol_matowany=figury.First(x => x.position == Move.IntToVector(new int[] { i_krola, j_krola }));
+                MediaPlayer.Play(promotion_sound);
+            }
+                
+            block_mouse = true;
+            return true;
+        }
+
+        public void animacja_konca_gry()
+        {
+            
+            if (numer_obrazka <animation_end_speed*8+1 ) numer_obrazka++;
+            if(numer_obrazka%animation_end_speed==0)
+                krol_matowany.picture = Content.Load<Texture2D>($"bK{numer_obrazka/animation_end_speed}");
         }
 
     }

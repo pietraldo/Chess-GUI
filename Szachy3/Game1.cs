@@ -151,7 +151,7 @@ namespace Szachy3
         // ustawienia
         private const int window_width = 1300;
         private const int window_height = 900;
-        private const string pozycja_startowa= "rnbqkbnr/pp3ppp/3P4/8/8/1p6/8/R3K2R w KQkq - 0 1";
+        private const string pozycja_startowa= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         public static int board_offset_x = 50;
         public static int board_offset_y = 50;
 
@@ -162,8 +162,13 @@ namespace Szachy3
         int board_start_position_y = 0;
         public int zbite_biale=0;
         public int zbite_czarne=0;
-        public Vector2[] pola_ruchow;
+        public bool block_mouse = false;
+        public bool wlaczyc_kolejnosc = false;
+        public Kolor_figury czyja_kolej=Kolor_figury.WHITE;
+        public bool mute = true;
+        public bool obroc_plansze = false;
 
+        private List<Move> mozliwe_posuniecia= new List<Move>();
         private List<Move> historia = new List<Move>();
 
         // tablica figur
@@ -231,6 +236,9 @@ namespace Szachy3
      
         protected override void Update(GameTime gameTime)
         {
+            // ustawianie dzwiekow
+            MediaPlayer.IsMuted=mute;
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)) //wychodznie klawiszami z aplikacji
                 Exit();
 
@@ -275,7 +283,7 @@ namespace Szachy3
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
+            
             // Rysowanie elementów
             _spriteBatch.Begin();
 
@@ -283,7 +291,7 @@ namespace Szachy3
             _spriteBatch.Draw(board, new Vector2(board_position.X+board_offset_x, board_position.Y+board_offset_y), Color.White);
            
             // Rysowanie czerwonych pól
-            rysuj_czerowne_pola(pola_ruchow);
+            rysuj_mozliwe_ruchy(mozliwe_posuniecia);
             
             // Rysowanie przycisku
             _spriteBatch.Draw(button1, button1_position, Color.White);
@@ -319,11 +327,9 @@ namespace Szachy3
             
             Vector2 m = new Vector2(Mouse.GetState().X-board_offset_x, Mouse.GetState().Y-board_offset_y);
             
-            pola_ruchow = new Vector2[0];
+            
             List<Move> avible_moves = new List<Move>();
 
-
-           
             int[] wsp = Move.VectorToInt(m);
 
             if (wsp[0]<8 && wsp[0]>=0 && wsp[1]<8 && wsp[1]>=0 && b.plansza[wsp[0], wsp[1]] != null)
@@ -331,31 +337,23 @@ namespace Szachy3
                 b.plansza[wsp[0], wsp[1]].Moves(b, wsp[0], wsp[1], avible_moves);
             }
 
-            pola_ruchow = new Vector2[avible_moves.Count];
-            
-            for (int i = 0; i < avible_moves.Count; i++)
-            {
-                pola_ruchow[i] = avible_moves[i].Odwrotnie_Koniec();
-            }
-
-            
-            
+            mozliwe_posuniecia = avible_moves;
 
         }
         public void lapanie_myszka_figur(MouseState mouseState)
         {
+            if (block_mouse) return;
             if (mouseState.LeftButton == ButtonState.Pressed) //klikniecie mysza
             {
                 if (index_dragged_piece == -1) //jak jeszcze niczego nie trzyma
                 {
                     // Wybieranie figury nad ktora jest myszka i ustawianie indexu i prev_position
                     var el = figury.Select((figura, index) => new {  Index = index, Figura = figura }).FirstOrDefault( x => x.Figura.IsMouseOver(mouseState));
-                    if(el!=null)
+                    if(el!=null && (figury[el.Index].kolor==czyja_kolej || !wlaczyc_kolejnosc))
                     {
                         if (figury[el.Index].zbity == false)
                             zdobadz_ruchy();
-                        
-                        
+
                         index_dragged_piece = el.Index;
                         prev_position = el.Figura.position;
                         
@@ -373,8 +371,8 @@ namespace Szachy3
                     
                     // dopasowanie pozycji pionka do pola po puszczeniu
                     figury[index_dragged_piece].position = new Vector2((int)((figury[index_dragged_piece].position.X + Piece.orginal_piece_size / 2) / 100) * 100, (int)((figury[index_dragged_piece].position.Y + Piece.orginal_piece_size / 2) / 100) * 100);
-                   
-                    if(pola_ruchow!=null&& pola_ruchow.Any(x => x == figury[index_dragged_piece].position)) // czy ta figura moze sie na to pole ruszyc
+
+                    if(mozliwe_posuniecia!=null&& mozliwe_posuniecia.Any(x => x==znajdz_wykonany_ruch())) // czy ta figura moze sie na to pole ruszyc
                     {
                         // szukanie czy na polu postawionego pionka jest jakis inny
                         Piece zbita = figury.FirstOrDefault(x => x.position == figury[index_dragged_piece].position && x.id != figury[index_dragged_piece].id);
@@ -382,6 +380,7 @@ namespace Szachy3
                         if (zbita == null) // puste pole
                         {
                             MediaPlayer.Play(move_sound);
+                            
                             // czy moze to roszada
                             sprawdz_czy_byla_roszada();
                            
@@ -396,7 +395,15 @@ namespace Szachy3
                             else // pole z figura przeciwnika
                                 zbicie_przeciwnika(zbita);
                         }
-                        historia.Add(new Move(prev_position, figury[index_dragged_piece].position));
+
+                        // bicie w przelocie
+                        sprawdz_czy_bylo_bicie_w_przelocie();
+
+                        historia.Add(znajdz_wykonany_ruch());
+
+                        // zmiana gracza
+                        czyja_kolej = (czyja_kolej == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE;
+                        wyswietl_historie();
                     }
                     else // zle upuszczenie figury albo w tym samym miejscu
                     {
@@ -406,8 +413,7 @@ namespace Szachy3
                         figury[index_dragged_piece].position = prev_position;
                     }
 
-                    pola_ruchow = new Vector2[0]; //resetowanie kolorowania 
-
+                    
                     //promocja
                     if (figury[index_dragged_piece].picture.Name[1] == 'P' && figury[index_dragged_piece].kolor == Kolor_figury.WHITE && figury[index_dragged_piece].position.Y == 0)
                     {
@@ -421,35 +427,68 @@ namespace Szachy3
                         figury[index_dragged_piece].promocja = true;
                         MediaPlayer.Play(promotion_sound);
                     }
+
+                    mozliwe_posuniecia = new List<Move>(); //resetowanie ruchow 
                 }
                 
                 index_dragged_piece = -1;
             }
         }
-        public void sprawdz_czy_byla_roszada()
+        private Move znajdz_wykonany_ruch()
         {
-            if (figury[index_dragged_piece].picture.Name[1] == 'K' && (prev_position.X - figury[index_dragged_piece].position.X) == 200 && figury[index_dragged_piece].position.Y==700)
+            return mozliwe_posuniecia.FirstOrDefault(x => { return figury[index_dragged_piece].position == Move.IntToVector(new int[] { x.i2, x.j2 }); });
+        }
+        private void wyswietl_historie()
+        {
+            Debug.WriteLine("---------Historia---------");
+            for(int i=0; i<historia.Count; i++)
+            {
+                Debug.WriteLine($"{i+1}.({historia[i].i1}, {historia[i].j1}) ->({historia[i].i2}, {historia[i].j2}) - {historia[i].ruch_specjalny}");
+            }
+            Debug.WriteLine("---------------------------");
+        }
+        private void sprawdz_czy_byla_roszada()
+        {
+            Move ruch = znajdz_wykonany_ruch();
+            if (ruch == null) { return; }
+            if (ruch.ruch_specjalny==Specjalny.ROSZADA_DLUGA_BIALYCH)
             {
                 Piece wieza = figury.FirstOrDefault(x => x.position == new Vector2(0, 700));
                 wieza.position = new Vector2(300, 700);
             }
-            else if (figury[index_dragged_piece].picture.Name[1] == 'K' && (figury[index_dragged_piece].position.X-prev_position.X) == 200 && figury[index_dragged_piece].position.Y == 700)
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_KROTKA_BIALYCH)
             {
                 Piece wieza = figury.FirstOrDefault(x => x.position == new Vector2(700, 700));
                 wieza.position = new Vector2(500, 700);
             }
 
-            if (figury[index_dragged_piece].picture.Name[1] == 'K' && (prev_position.X - figury[index_dragged_piece].position.X) == 200 && figury[index_dragged_piece].position.Y == 0)
+            if (ruch.ruch_specjalny == Specjalny.ROSZADA_DLUGA_CZARNYCH)
             {
                 Piece wieza = figury.FirstOrDefault(x => x.position == new Vector2(0, 0));
                 wieza.position = new Vector2(300, 0);
             }
-            else if (figury[index_dragged_piece].picture.Name[1] == 'K' && (figury[index_dragged_piece].position.X - prev_position.X) == 200 && figury[index_dragged_piece].position.Y == 0)
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_KROTKA_CZARNYCH)
             {
                 Piece wieza = figury.FirstOrDefault(x => x.position == new Vector2(700, 0));
                 wieza.position = new Vector2(500, 0);
             }
         }
+        private void sprawdz_czy_bylo_bicie_w_przelocie()
+        {
+            Move ruch = znajdz_wykonany_ruch();
+           
+            if (ruch != null && ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_BIALYCH)
+            {
+                Piece zbita_w_przelocie = figury.FirstOrDefault(x => x.position == Move.IntToVector(new int[] { ruch.i2 - 1, ruch.j2 }));
+                zbicie_przeciwnika(zbita_w_przelocie);
+            }
+            if (ruch != null && ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_CZARNYCH)
+            {
+                Piece zbita_w_przelocie = figury.FirstOrDefault(x => x.position == Move.IntToVector(new int[] { ruch.i2 + 1, ruch.j2 }));
+                zbicie_przeciwnika(zbita_w_przelocie);
+            }
+        }
+       
         public void zbicie_przeciwnika(Piece zbity)
         {
             MediaPlayer.Play(capture_sound);
@@ -564,6 +603,18 @@ namespace Szachy3
             button1 = Content.Load<Texture2D>("resetuj");
             button1_position = new Vector2(button1_start_position_x, button1_start_position_y);
         }
+
+        private void rysuj_mozliwe_ruchy(List<Move> ruchy)
+        {
+            for (int i = 0; i < ruchy.Count; i++)
+            {
+                Texture2D czerwony = Content.Load<Texture2D>("niebieski");
+
+                _spriteBatch.Draw(czerwony, Move.IntToVector(new int[2] { ruchy[i].i2, ruchy[i].j2 })+new Vector2( board_offset_x, board_offset_y), new Color(255, 255, 255, 128)); // 50% przezroczystości
+
+            }
+        }
+
         protected void rysuj_czerowne_pola(Vector2[] pola)
         {
             for(int i=0; i< pola.Length; i++) 
@@ -587,6 +638,7 @@ namespace Szachy3
         {
             Initialize_Pieces();
             historia = new List<Move>();
+            czyja_kolej = Kolor_figury.WHITE;
         }
 
     }

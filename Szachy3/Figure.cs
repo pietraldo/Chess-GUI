@@ -14,20 +14,20 @@ namespace Szachy3
         public Figure[,] plansza = new Figure[8, 8];
         private List<Move> historia;
 
-        public bool[] roszady_bialych = new bool[]{true, true};
-        public bool[] roszady_czarnych = new bool[]{true, true};
+        public bool[] roszady_bialych = new bool[] { true, true };
+        public bool[] roszady_czarnych = new bool[] { true, true };
 
-        public Board(Game1.Piece[] figury, List<Move> historia=null)
+        public Board(Game1.Piece[] figury, List<Move> historia = null)
         {
             this.historia = (historia == null) ? new List<Move>() : historia;
-            foreach(Game1.Piece figura in figury)
+            foreach (Game1.Piece figura in figury)
             {
                 if (figura.zbity) continue;
-                Kolor_figury k = (figura.picture.Name[0]=='w')?Kolor_figury.WHITE: Kolor_figury.BLACK;
-                switch(figura.picture.Name[1])
+                Kolor_figury k = (figura.picture.Name[0] == 'w') ? Kolor_figury.WHITE : Kolor_figury.BLACK;
+                switch (figura.picture.Name[1])
                 {
                     case 'B':
-                        plansza[7-(int)(figura.position.Y / 100), (int)(figura.position.X / 100)] = new Bishop(k);
+                        plansza[7 - (int)(figura.position.Y / 100), (int)(figura.position.X / 100)] = new Bishop(k);
                         break;
                     case 'R':
                         plansza[7 - (int)(figura.position.Y / 100), (int)(figura.position.X / 100)] = new Rook(k);
@@ -47,13 +47,13 @@ namespace Szachy3
                 }
             }
 
-            for(int i=0;i<historia.Count;i++)
+            for (int i = 0; i < historia.Count; i++)
             {
                 if (historia[i].i1 == 0 && historia[i].j1 == 0)
                     roszady_bialych[0] = false;
                 if (historia[i].i1 == 0 && historia[i].j1 == 7)
                     roszady_bialych[1] = false;
-                if (historia[i].i1==0 && historia[i].j1==4)
+                if (historia[i].i1 == 0 && historia[i].j1 == 4)
                 {
                     roszady_bialych[0] = false;
                     roszady_bialych[1] = false;
@@ -73,12 +73,12 @@ namespace Szachy3
 
         public void Show_Board()
         {
-            for(int i=7; i>=0 ; i--)
+            for (int i = 7; i >= 0; i--)
             {
                 for (int j = 0; j < 8; j++)
                 {
                     if (plansza[i, j] != null)
-                        Debug.Write(plansza[i,j].Show()+" ");
+                        Debug.Write(plansza[i, j].Show() + " ");
                     else
                         Debug.Write(". ");
                 }
@@ -89,8 +89,8 @@ namespace Szachy3
         public void Show_History()
         {
             Debug.WriteLine(historia.Count);
-            
-            for(int i=0; i<historia.Count; i++)
+
+            for (int i = 0; i < historia.Count; i++)
             {
                 historia[i].Show();
             }
@@ -99,39 +99,46 @@ namespace Szachy3
         public bool czy_atak_na_pole(int i1, int j1, Kolor_figury kol) // czy kolor atakuje dane pole
         {
             // dodajmy na chwile figure
-            plansza[i1, j1] = new Pawn((kol==Kolor_figury.WHITE)?Kolor_figury.BLACK:Kolor_figury.WHITE);
-            for(int i=0;i<8; i++)
+            plansza[i1, j1] = new Pawn((kol == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE);
+            for (int i = 0; i < 8; i++)
             {
-                for(int j=0; j<8; j++)
+                for (int j = 0; j < 8; j++)
                 {
-                    if (plansza[i,j]!= null && plansza[i,j].kolor == kol)
+                    if (plansza[i, j] != null && plansza[i, j].kolor == kol)
                     {
-                        List<Move> ruchy= new List<Move>();
+                        List<Move> ruchy = new List<Move>();
                         plansza[i, j].Moves(this, i, j, ruchy);
 
-                       
 
-                        bool odp=ruchy.Any(x => x.i2 == i1 && x.j2 == j1);
-                        if(odp)
+
+                        bool odp = ruchy.Any(x => x.i2 == i1 && x.j2 == j1);
+                        if (odp)
                         {
                             plansza[i1, j1] = null;
                             return true;
                         }
                     }
                 }
-                
+
 
             }
             plansza[i1, j1] = null;
             return false;
         }
+
+        public Move ostatni_ruch()
+        {
+            return (historia.Count != 0) ? historia.Last() : null;
+        }
     }
+    public enum Specjalny {ZWYKLY, ROSZADA_KROTKA_BIALYCH, ROSZADA_DLUGA_BIALYCH,ROSZADA_KROTKA_CZARNYCH, ROSZADA_DLUGA_CZARNYCH, BICIE_W_PRZELOCIE_BIALYCH, BICIE_W_PRZELOCIE_CZARNYCH,PROMOCJA_BIALYCH, PROMOCJA_CZARNYCH}
     internal class Move
     {
         public int i1;
         public int j1;
         public int i2;
         public int j2;
+        public Specjalny ruch_specjalny;
         public Move(Vector2 a, Vector2 b)
         {
             i1 = 7 - (int)(a.Y / 100);
@@ -139,12 +146,13 @@ namespace Szachy3
             i2 = 7 - (int)(b.Y / 100);
             j2 = (int)(b.X / 100);
         }
-        public Move(int i1, int j1, int i2, int j2)
+        public Move(int i1, int j1, int i2, int j2, Specjalny sp=Specjalny.ZWYKLY)
         {
             this.i1 = i1;
             this.j2 = j2;
             this.j1 = j1;
             this.i2 = i2;
+            ruch_specjalny = sp;
         }
         public Vector2 Odwrotnie_Koniec()
         {
@@ -157,9 +165,13 @@ namespace Szachy3
             a[1] = (int)(b.X / 100);
             return a;
         }
+        public static Vector2 IntToVector(int[] tab)
+        {
+            return new Vector2(tab[1] * 100, (7 - tab[0]) * 100);
+        }
         public void Show()
         {
-            Debug.WriteLine("("+i1+", "+j1+") ->"+ "(" + i2 + ", " + j2+")");
+            Debug.WriteLine("("+i1+", "+j1+") ->"+ "(" + i2 + ", " + j2+") "+(ruch_specjalny));
         }
     }
     internal abstract class Figure
@@ -333,26 +345,27 @@ namespace Szachy3
                 }
 
             }
+            // Roszady
             if (b.plansza[i,j].kolor==Kolor_figury.WHITE)
             {
                 if (b.roszady_bialych[0] && b.plansza[0,3]==null && b.plansza[0, 2] == null  && b.plansza[0, 1] == null && !b.czy_atak_na_pole(0,3,Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 2, Kolor_figury.BLACK))
                 {
-                    ruchy.Add(new Move(i, j, 0,2));
+                    ruchy.Add(new Move(i, j, 0,2, Specjalny.ROSZADA_DLUGA_BIALYCH));
                 }
                 if (b.roszady_bialych[1] && b.plansza[0, 5] == null && b.plansza[0, 6] == null  && !b.czy_atak_na_pole(0, 5, Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 6, Kolor_figury.BLACK))
                 {
-                    ruchy.Add(new Move(i, j, 0, 6));
+                    ruchy.Add(new Move(i, j, 0, 6, Specjalny.ROSZADA_KROTKA_BIALYCH));
                 }
             }
             if (b.plansza[i, j].kolor == Kolor_figury.BLACK)
             {
                 if (b.roszady_czarnych[0] && b.plansza[7, 3] == null && b.plansza[7, 2] == null && b.plansza[7, 1] == null && !b.czy_atak_na_pole(7, 3, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 2, Kolor_figury.WHITE))
                 {
-                    ruchy.Add(new Move(i, j, 7, 2));
+                    ruchy.Add(new Move(i, j, 7, 2, Specjalny.ROSZADA_DLUGA_CZARNYCH));
                 }
                 if (b.roszady_czarnych[1] && b.plansza[7, 5] == null && b.plansza[7, 6] == null && !b.czy_atak_na_pole(7, 5, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 6, Kolor_figury.WHITE))
                 {
-                    ruchy.Add(new Move(i, j, 7, 6));
+                    ruchy.Add(new Move(i, j, 7, 6, Specjalny.ROSZADA_KROTKA_CZARNYCH));
                 }
             }
         }
@@ -379,15 +392,25 @@ namespace Szachy3
                 }
                 if (i + 1 < 8 && b.plansza[i + 1, j] == null) // ruch o jeden
                 {
-                    ruchy.Add(new Move(i, j, 1 + i, j));
+                    ruchy.Add(new Move(i, j, 1 + i, j, (1 + i == 7) ? Specjalny.PROMOCJA_BIALYCH : Specjalny.ZWYKLY));
                 }
                 if (i + 1 < 8 && j - 1 >= 0 && b.plansza[i + 1, j - 1] != null && b.plansza[i + 1, j - 1].kolor == Kolor_figury.BLACK) // ruch o bicie w lewo
                 {
-                    ruchy.Add(new Move(i, j, 1 + i, j - 1));
+                    ruchy.Add(new Move(i, j, 1 + i, j - 1,(1 + i == 7) ? Specjalny.PROMOCJA_BIALYCH : Specjalny.ZWYKLY));
                 }
                 if (i + 1 < 8 && j + 1 < 8 && b.plansza[i + 1, j + 1] != null && b.plansza[i + 1, j + 1].kolor == Kolor_figury.BLACK) // ruch o bicie w prawo
                 {
-                    ruchy.Add(new Move(i, j, 1 + i, j + 1));
+                    ruchy.Add(new Move(i, j, 1 + i, j + 1, (1+i==7)?Specjalny.PROMOCJA_BIALYCH:Specjalny.ZWYKLY));
+                }
+                //bicie w przelocie
+                Move ostatni_ruch = b.ostatni_ruch();
+                if(ostatni_ruch!=null && ostatni_ruch.i2==4 && ostatni_ruch.i1==6 && b.plansza[ostatni_ruch.i2,ostatni_ruch.j2].kolor == Kolor_figury.BLACK && b.plansza[ostatni_ruch.i2, ostatni_ruch.j2].GetType() == b.plansza[i,j].GetType())
+                {
+                    
+                    if(j==ostatni_ruch.j2-1 && i==ostatni_ruch.i2)
+                        ruchy.Add(new Move(i, j, i+1, j + 1, Specjalny.BICIE_W_PRZELOCIE_BIALYCH));
+                    if (j == ostatni_ruch.j2 + 1 && i == ostatni_ruch.i2)
+                        ruchy.Add(new Move(i, j,  i+1, j - 1, Specjalny.BICIE_W_PRZELOCIE_BIALYCH));
                 }
             }
             else // czarne
@@ -398,15 +421,24 @@ namespace Szachy3
                 }
                 if (i - 1 >= 0 && b.plansza[i - 1, j] == null) // ruch o jeden
                 {
-                    ruchy.Add(new Move(i, j, i - 1, j));
+                    ruchy.Add(new Move(i, j, i - 1, j, (i-1 == 0) ? Specjalny.PROMOCJA_CZARNYCH : Specjalny.ZWYKLY));
                 }
                 if (i - 1 >= 0 && j - 1 >= 0 && b.plansza[i - 1, j - 1] != null && b.plansza[i - 1, j - 1].kolor == Kolor_figury.WHITE) // ruch o bicie w lewo
                 {
-                    ruchy.Add(new Move(i, j, i - 1, j - 1));
+                    ruchy.Add(new Move(i, j, i - 1, j - 1, (i - 1 == 0) ? Specjalny.PROMOCJA_CZARNYCH : Specjalny.ZWYKLY));
                 }
                 if (i - 1 >= 0 && j + 1 < 8 && b.plansza[i - 1, j + 1] != null && b.plansza[i - 1, j + 1].kolor == Kolor_figury.WHITE) // ruch o bicie w prawo
                 {
-                    ruchy.Add(new Move(i, j, i - 1, j + 1));
+                    ruchy.Add(new Move(i, j, i - 1, j + 1, (i - 1 == 0) ? Specjalny.PROMOCJA_CZARNYCH : Specjalny.ZWYKLY));
+                }
+                Move ostatni_ruch = b.ostatni_ruch();
+                if (ostatni_ruch != null && ostatni_ruch.i2 == 3 && ostatni_ruch.i1 == 1 && b.plansza[ostatni_ruch.i2, ostatni_ruch.j2].kolor == Kolor_figury.WHITE && b.plansza[ostatni_ruch.i2, ostatni_ruch.j2].GetType() == b.plansza[i, j].GetType())
+                {
+                    
+                    if (j == ostatni_ruch.j2 - 1 && i == ostatni_ruch.i2)
+                        ruchy.Add(new Move(i, j, i - 1, j + 1, Specjalny.BICIE_W_PRZELOCIE_CZARNYCH));
+                    if (j == ostatni_ruch.j2 + 1 && i == ostatni_ruch.i2)
+                        ruchy.Add(new Move(i, j, i - 1, j - 1, Specjalny.BICIE_W_PRZELOCIE_CZARNYCH));
                 }
             }
         }

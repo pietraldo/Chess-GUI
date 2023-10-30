@@ -411,22 +411,22 @@ namespace Szachy3
             // Roszady
             if (b.plansza[i,j].kolor==Kolor_figury.WHITE && !b.czy_jest_szach(Kolor_figury.BLACK))
             {
-                if (b.roszady_bialych[0] && b.plansza[0,3]==null && b.plansza[0, 2] == null  && b.plansza[0, 1] == null && !b.czy_atak_na_pole(0,3,Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 2, Kolor_figury.BLACK))
+                if (b.roszady_bialych[0] && b.plansza[0,3]==null && b.plansza[0, 2] == null  && b.plansza[0, 1] == null && !b.czy_atak_na_pole(0,3,Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 2, Kolor_figury.BLACK) && b.plansza[0,0]!=null && b.plansza[0,0].kolor==Kolor_figury.WHITE && b.plansza[0,0].GetPoints()==5)
                 {
                     ruchy.Add(new Move(i, j, 0,2, Specjalny.ROSZADA_DLUGA_BIALYCH));
                 }
-                if (b.roszady_bialych[1] && b.plansza[0, 5] == null && b.plansza[0, 6] == null  && !b.czy_atak_na_pole(0, 5, Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 6, Kolor_figury.BLACK))
+                if (b.roszady_bialych[1] && b.plansza[0, 5] == null && b.plansza[0, 6] == null  && !b.czy_atak_na_pole(0, 5, Kolor_figury.BLACK) && !b.czy_atak_na_pole(0, 6, Kolor_figury.BLACK) && b.plansza[0, 7] != null && b.plansza[0, 7].kolor == Kolor_figury.WHITE && b.plansza[0, 7].GetPoints() == 5)
                 {
                     ruchy.Add(new Move(i, j, 0, 6, Specjalny.ROSZADA_KROTKA_BIALYCH));
                 }
             }
             if (b.plansza[i, j].kolor == Kolor_figury.BLACK && !b.czy_jest_szach(Kolor_figury.WHITE))
             {
-                if (b.roszady_czarnych[0] && b.plansza[7, 3] == null && b.plansza[7, 2] == null && b.plansza[7, 1] == null && !b.czy_atak_na_pole(7, 3, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 2, Kolor_figury.WHITE))
+                if (b.roszady_czarnych[0] && b.plansza[7, 3] == null && b.plansza[7, 2] == null && b.plansza[7, 1] == null && !b.czy_atak_na_pole(7, 3, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 2, Kolor_figury.WHITE) && b.plansza[7, 0] != null && b.plansza[7,0].kolor == Kolor_figury.BLACK && b.plansza[7,0].GetPoints() == 5)
                 {
                     ruchy.Add(new Move(i, j, 7, 2, Specjalny.ROSZADA_DLUGA_CZARNYCH));
                 }
-                if (b.roszady_czarnych[1] && b.plansza[7, 5] == null && b.plansza[7, 6] == null && !b.czy_atak_na_pole(7, 5, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 6, Kolor_figury.WHITE))
+                if (b.roszady_czarnych[1] && b.plansza[7, 5] == null && b.plansza[7, 6] == null && !b.czy_atak_na_pole(7, 5, Kolor_figury.WHITE) && !b.czy_atak_na_pole(7, 6, Kolor_figury.WHITE) && b.plansza[7, 7] != null && b.plansza[7, 7].kolor == Kolor_figury.BLACK && b.plansza[7, 7].GetPoints() == 5)
                 {
                     ruchy.Add(new Move(i, j, 7, 6, Specjalny.ROSZADA_KROTKA_CZARNYCH));
                 }

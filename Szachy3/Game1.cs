@@ -150,7 +150,7 @@ namespace Szachy3
 
         // ustawienia
         
-        private const string pozycja_startowa= "2k5/4Q3/3K4/8/8/8/8/8 w - - 0 1";
+        private const string pozycja_startowa= "4k3/8/8/8/8/2Q5/8/4K3 w - - 0 1";
         public bool block_mouse = false;
         public bool wylaczyc_kolejnosc = false;
         public Kolor_figury czyja_kolej = Kolor_figury.WHITE;
@@ -189,6 +189,7 @@ namespace Szachy3
         Song wrong_move_sound;
         Song capture_sound;
         Song promotion_sound;
+        Song laugh;
 
         // button
         Texture2D button1;
@@ -206,6 +207,7 @@ namespace Szachy3
         // animacja matowania
         bool koniec_gry = false;
         Piece krol_matowany;
+        bool mat = true;
         int numer_obrazka = 1;
         int animation_end_speed = 10;
 
@@ -609,6 +611,7 @@ namespace Szachy3
             this.wrong_move_sound = Content.Load<Song>("sound2");
             this.capture_sound = Content.Load<Song>("explo_sound");
             this.promotion_sound = Content.Load<Song>("win3");
+            this.laugh = Content.Load<Song>("laugh");
         }
         protected void Initialize_Buttons()
         {
@@ -684,7 +687,10 @@ namespace Szachy3
 
             if (czy_pat)
             {
-                MediaPlayer.Play(wrong_move_sound);
+                MediaPlayer.Play(laugh);
+                krol_matowany = figury.First(x => x.position == Move.IntToVector(new int[] { i_krola, j_krola }));
+                krol_matowany.picture = Content.Load<Texture2D>((czyja_kolej == Kolor_figury.WHITE) ? "wKP" : "bKP");
+                mat = false;
             }
             else // mat 
             {
@@ -700,7 +706,7 @@ namespace Szachy3
         {
             
             if (numer_obrazka <animation_end_speed*8+1 ) numer_obrazka++;
-            if(numer_obrazka%animation_end_speed==0)
+            if(numer_obrazka%animation_end_speed==0 && mat)
                 krol_matowany.picture = Content.Load<Texture2D>($"bK{numer_obrazka/animation_end_speed}");
         }
 

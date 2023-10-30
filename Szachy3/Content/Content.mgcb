@@ -145,6 +145,18 @@
 /processorParam:TextureFormat=Color
 /build:bK8.png
 
+#begin bKP.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:bKP.png
+
 #begin bN.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -216,6 +228,12 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:czerwone.png
+
+#begin laugh.mp3
+/importer:Mp3Importer
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:laugh.mp3
 
 #begin mixkit-arcade-retro-changing-tab-206 (1).mp3
 /importer:Mp3Importer
@@ -300,6 +318,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:wK.png
+
+#begin wKP.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:wKP.png
 
 #begin wN.png
 /importer:TextureImporter

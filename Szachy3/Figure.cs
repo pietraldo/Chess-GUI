@@ -156,14 +156,152 @@ namespace Szachy3
         }
         public bool poprawny_ruch(Move ruch)
         {
-            Figure poprzednia = plansza[ruch.i2, ruch.j2];
-            plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
-            plansza[ruch.i1, ruch.j1] = null;
+           
+            Figure zbita = MakeMove(ruch);
             bool odp = czy_jest_szach((plansza[ruch.i2, ruch.j2].kolor == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE);
-            plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
-            plansza[ruch.i2, ruch.j2] = poprzednia;
+            UnDoMove(ruch, zbita);
 
             return !odp;
+        }
+
+        public void UnDoMove(Move ruch, Figure zbita)
+        {
+            if(ruch.ruch_specjalny==Specjalny.ZWYKLY)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = zbita;
+            }
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_KROTKA_BIALYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[0,7] = plansza[0,5];
+                
+            }
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_DLUGA_BIALYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[0, 0] = plansza[0, 3];
+            }
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_KROTKA_CZARNYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[7, 7] = plansza[7, 5];
+            }
+            else if (ruch.ruch_specjalny == Specjalny.ROSZADA_DLUGA_CZARNYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[7, 0] = plansza[7,3];
+            }
+            else if (ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_BIALYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                if (ruch.j2 < ruch.j1)// bicie w lewo skos
+                {
+                    plansza[ruch.i1, ruch.j1 - 1] = zbita;
+                }
+                else // bicie prawo skos
+                {
+                    plansza[ruch.i1, ruch.j1 + 1] = zbita;
+                }
+            }
+            else if (ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_CZARNYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                if (ruch.j2 < ruch.j1)// bicie w lewo skos
+                {
+                    plansza[ruch.i1, ruch.j1 - 1] = zbita;
+                }
+                else // bicie prawo skos
+                {
+                    plansza[ruch.i1, ruch.j1 + 1] = zbita;
+                }
+            }
+            else if (ruch.ruch_specjalny == Specjalny.PROMOCJA_BIALYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = zbita;
+            }
+            else if (ruch.ruch_specjalny == Specjalny.PROMOCJA_CZARNYCH)
+            {
+                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = zbita;
+            }
+
+           
+        }
+        public Figure MakeMove(Move ruch) // wykonuje ruch i zwraca figure ktora na tym polu stala
+        {
+            Figure zwracana=null;
+            if(ruch.ruch_specjalny==Specjalny.ZWYKLY)
+            {
+                zwracana = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+            }
+            else if(ruch.ruch_specjalny==Specjalny.ROSZADA_KROTKA_BIALYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[0,5] = plansza[0, 7];
+                plansza[0, 7] = null;
+            }
+            else if(ruch.ruch_specjalny==Specjalny.ROSZADA_DLUGA_BIALYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[0, 3] = plansza[0, 0];
+                plansza[0, 0] = null;
+            }
+            else if(ruch.ruch_specjalny==Specjalny.ROSZADA_KROTKA_CZARNYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[7, 5] = plansza[7, 7];
+                plansza[7, 7] = null;
+            }
+            else if(ruch.ruch_specjalny==Specjalny.ROSZADA_DLUGA_CZARNYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[7, 3] = plansza[7, 0];
+                plansza[7, 0] = null;
+            }
+            else if(ruch.ruch_specjalny==Specjalny.BICIE_W_PRZELOCIE_BIALYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                if(ruch.j2<ruch.j1)// bicie w lewo skos
+                {
+                    zwracana = plansza[ruch.i1, ruch.j1 - 1];
+                    plansza[ruch.i1, ruch.j1 - 1] = null;
+                    
+                }
+                else // bicie prawo skos
+                {
+                    zwracana = plansza[ruch.i1, ruch.j1 + 1];
+                    plansza[ruch.i1, ruch.j1 + 1] = null;
+                }
+            }
+            else if(ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_CZARNYCH)
+            {
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                if (ruch.j2 < ruch.j1)// bicie w lewo skos
+                {
+                    zwracana = plansza[ruch.i1, ruch.j1 - 1];
+                    plansza[ruch.i1, ruch.j1 - 1] = null;
+                }
+                else // bicie prawo skos
+                {
+                    zwracana = plansza[ruch.i1, ruch.j1 + 1];
+                    plansza[ruch.i1, ruch.j1 + 1] = null;
+                }
+            }
+            else if(ruch.ruch_specjalny == Specjalny.PROMOCJA_BIALYCH)
+            {
+                zwracana = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+            }
+            else if(ruch.ruch_specjalny == Specjalny.PROMOCJA_CZARNYCH)
+            {
+                zwracana = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+            }
+            plansza[ruch.i1, ruch.j1] = null;
+            return zwracana;
         }
     }
     public enum Specjalny {ZWYKLY, ROSZADA_KROTKA_BIALYCH, ROSZADA_DLUGA_BIALYCH,ROSZADA_KROTKA_CZARNYCH, ROSZADA_DLUGA_CZARNYCH, BICIE_W_PRZELOCIE_BIALYCH, BICIE_W_PRZELOCIE_CZARNYCH,PROMOCJA_BIALYCH, PROMOCJA_CZARNYCH}

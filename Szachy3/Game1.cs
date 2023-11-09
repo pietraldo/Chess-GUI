@@ -150,11 +150,12 @@ namespace Szachy3
 
         // ustawienia
         
-        private const string pozycja_startowa= "4k3/8/8/8/8/2Q5/8/4K3 w - - 0 1";
+        private const string pozycja_startowa= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
         public bool block_mouse = false;
         public bool wylaczyc_kolejnosc = false;
         public Kolor_figury czyja_kolej = Kolor_figury.WHITE;
         public bool mute = false;
+        public bool bot = true;
         
         // board
         Texture2D board;
@@ -168,6 +169,7 @@ namespace Szachy3
         private const int window_height = 900;
         public static int board_offset_x = 50;
         public static int board_offset_y = 50;
+        public Vector2[] pola_bota= new Vector2[0]; 
 
         private List<Move> mozliwe_posuniecia= new List<Move>();
         private List<Move> historia = new List<Move>();
@@ -298,6 +300,7 @@ namespace Szachy3
            
             // Rysowanie czerwonych pól
             rysuj_mozliwe_ruchy(mozliwe_posuniecia);
+            rysuj_czerowne_pola(pola_bota);
             
             // Rysowanie przycisku
             _spriteBatch.Draw(button1, button1_position, Color.White);
@@ -353,6 +356,11 @@ namespace Szachy3
                 animacja_konca_gry();
                 return;
             }
+            if (figury.Any(x => x.promocja) || figury.Any(x=> (x.zbity && (x.position!=x.miejsce_docelowe)) )) return;
+            if(bot && czyja_kolej==Kolor_figury.BLACK)
+            {
+                bot_zrob_ruch();
+            }
             if (block_mouse) return;
             if (mouseState.LeftButton == ButtonState.Pressed) //klikniecie mysza
             {
@@ -362,13 +370,12 @@ namespace Szachy3
                     var el = figury.Select((figura, index) => new {  Index = index, Figura = figura }).FirstOrDefault( x => x.Figura.IsMouseOver(mouseState));
                     if(el!=null && (figury[el.Index].kolor==czyja_kolej || wylaczyc_kolejnosc))
                     {
-                        wyswietl_historie();
+                        
                         if (figury[el.Index].zbity == false)
                             zdobadz_ruchy();
 
                         index_dragged_piece = el.Index;
                         prev_position = el.Figura.position;
-                        
                     }
                    
                 }
@@ -399,13 +406,8 @@ namespace Szachy3
                         }
                         else //pole z figura
                         {
-                            if (zbita.kolor == figury[index_dragged_piece].kolor) // pole z wlasna figura
-                            {
-                                figury[index_dragged_piece].position = prev_position; // powrot na poprzednie miejsce
-                                MediaPlayer.Play(wrong_move_sound);
-                            }
-                            else // pole z figura przeciwnika
-                                zbicie_przeciwnika(zbita);
+                             // pole z figura przeciwnika
+                            zbicie_przeciwnika(zbita);
                         }
 
                         // bicie w przelocie
@@ -417,7 +419,7 @@ namespace Szachy3
                         czyja_kolej = (czyja_kolej == Kolor_figury.WHITE) ? Kolor_figury.BLACK : Kolor_figury.WHITE;
                         
                         koniec_gry=czy_koniec_gry();
-                        wyswietl_historie();
+                        //wyswietl_historie();
                     }
                     else // zle upuszczenie figury albo w tym samym miejscu
                     {
@@ -427,26 +429,63 @@ namespace Szachy3
                         figury[index_dragged_piece].position = prev_position;
                     }
 
-                    
+
                     //promocja
-                    if (figury[index_dragged_piece].picture.Name[1] == 'P' && figury[index_dragged_piece].kolor == Kolor_figury.WHITE && figury[index_dragged_piece].position.Y == 0)
-                    {
-                        figury[index_dragged_piece].position_promocji = figury[index_dragged_piece].position;
-                        figury[index_dragged_piece].promocja=true;
-                        MediaPlayer.Play(promotion_sound);
-                    }
-                    else if (figury[index_dragged_piece].picture.Name[1] == 'P' && figury[index_dragged_piece].kolor == Kolor_figury.BLACK && figury[index_dragged_piece].position.Y == 700)
-                    {
-                        figury[index_dragged_piece].position_promocji = figury[index_dragged_piece].position;
-                        figury[index_dragged_piece].promocja = true;
-                        MediaPlayer.Play(promotion_sound);
-                    }
+                    promocja(figury[index_dragged_piece]);
 
                     mozliwe_posuniecia = new List<Move>(); //resetowanie ruchow 
                 }
                 
                 index_dragged_piece = -1;
             }
+        }
+
+        public void promocja(Piece pionek)
+        {
+            if (pionek.picture.Name[1] == 'P' && pionek.kolor == Kolor_figury.WHITE && pionek.position.Y == 0)
+            {
+                pionek.position_promocji = pionek.position;
+                pionek.promocja = true;
+                MediaPlayer.Play(promotion_sound);
+            }
+            else if (pionek.picture.Name[1] == 'P' && pionek.kolor == Kolor_figury.BLACK && pionek.position.Y == 700)
+            {
+                pionek.position_promocji = pionek.position;
+                pionek.promocja = true;
+                MediaPlayer.Play(promotion_sound);
+            }
+        }
+        private void bot_zrob_ruch()
+        {
+            Board b = new Board(figury, historia);
+            Bot bot = new Bot();
+            Move ruchBota = bot.MakeMoveFromFileEngine(b);
+            if (ruchBota != null)
+            {
+                var el = figury.Select((figura, index) => new { Index = index, Figura = figura }).FirstOrDefault(x => x.Figura.position == Move.IntToVector(new int[] { ruchBota.i1, ruchBota.j1 }));
+                Piece zbita = figury.FirstOrDefault(x => x.position == Move.IntToVector(new int[] { ruchBota.i2, ruchBota.j2 }) );
+
+                if (zbita != null)  //pole z figura
+                {
+                    zbicie_przeciwnika(zbita);
+                }
+                else
+                {
+                    MediaPlayer.Play(move_sound);
+                }
+                
+                pola_bota=(new Vector2[] { Move.IntToVector(new int[] { ruchBota.i2, ruchBota.j2 }) , Move.IntToVector(new int[] { ruchBota.i1, ruchBota.j1 }) });
+                el.Figura.position = Move.IntToVector(new int[] { ruchBota.i2, ruchBota.j2 });
+                sprawdz_czy_byla_roszada(ruchBota);
+                sprawdz_czy_bylo_bicie_w_przelocie(ruchBota);
+                
+                promocja(el.Figura);
+                historia.Add(ruchBota);
+                //wyswietl_historie();
+                
+            }
+            czyja_kolej = Kolor_figury.WHITE;
+            koniec_gry = czy_koniec_gry();
         }
         private Move znajdz_wykonany_ruch()
         {
@@ -461,9 +500,15 @@ namespace Szachy3
             }
             Debug.WriteLine("---------------------------");
         }
-        private void sprawdz_czy_byla_roszada()
+        private void sprawdz_czy_byla_roszada(Move ruch2=null)
         {
-            Move ruch = znajdz_wykonany_ruch();
+            Move ruch;
+            if (ruch2 == null)
+            {
+                ruch = znajdz_wykonany_ruch();
+            }
+            else ruch = ruch2;
+             
             if (ruch == null) { return; }
             if (ruch.ruch_specjalny==Specjalny.ROSZADA_DLUGA_BIALYCH)
             {
@@ -487,9 +532,12 @@ namespace Szachy3
                 wieza.position = new Vector2(500, 0);
             }
         }
-        private void sprawdz_czy_bylo_bicie_w_przelocie()
+        private void sprawdz_czy_bylo_bicie_w_przelocie(Move ruch2=null)
         {
-            Move ruch = znajdz_wykonany_ruch();
+            Move ruch;
+            if (ruch2 == null)
+                ruch = znajdz_wykonany_ruch();
+            else ruch = ruch2;
            
             if (ruch != null && ruch.ruch_specjalny == Specjalny.BICIE_W_PRZELOCIE_BIALYCH)
             {
@@ -634,7 +682,7 @@ namespace Szachy3
         {
             for(int i=0; i< pola.Length; i++) 
             {
-                Texture2D czerwony = Content.Load<Texture2D>("niebieski");
+                Texture2D czerwony = Content.Load<Texture2D>("czerwone");
 
                 _spriteBatch.Draw(czerwony, new Vector2(pola[i].X + board_offset_x, pola[i].Y+board_offset_y), new Color(255,255,255,128)); // 50% przezroczystości
 
@@ -673,8 +721,9 @@ namespace Szachy3
                     if (b.plansza[i, j]!=null && b.plansza[i,j].kolor==czyja_kolej)
                     {
                         b.plansza[i, j].Moves(b,i,j,ruchy,true);
-                        if (ruchy.Count != 0)
-                            return false;
+                        if (ruchy.Count != 0) return false;
+                        
+                           
                     }
                     if(b.plansza[i, j] != null && b.plansza[i, j].kolor == czyja_kolej && b.plansza[i, j].GetPoints()==10000)
                     {

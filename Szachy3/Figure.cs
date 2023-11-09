@@ -218,12 +218,12 @@ namespace Szachy3
             }
             else if (ruch.ruch_specjalny == Specjalny.PROMOCJA_BIALYCH)
             {
-                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i1, ruch.j1] = new Pawn(Kolor_figury.WHITE);
                 plansza[ruch.i2, ruch.j2] = zbita;
             }
             else if (ruch.ruch_specjalny == Specjalny.PROMOCJA_CZARNYCH)
             {
-                plansza[ruch.i1, ruch.j1] = plansza[ruch.i2, ruch.j2];
+                plansza[ruch.i1, ruch.j1] = new Pawn(Kolor_figury.BLACK);
                 plansza[ruch.i2, ruch.j2] = zbita;
             }
 
@@ -293,12 +293,12 @@ namespace Szachy3
             else if(ruch.ruch_specjalny == Specjalny.PROMOCJA_BIALYCH)
             {
                 zwracana = plansza[ruch.i2, ruch.j2];
-                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[ruch.i2, ruch.j2] = new Queen(Kolor_figury.WHITE);
             }
             else if(ruch.ruch_specjalny == Specjalny.PROMOCJA_CZARNYCH)
             {
                 zwracana = plansza[ruch.i2, ruch.j2];
-                plansza[ruch.i2, ruch.j2] = plansza[ruch.i1, ruch.j1];
+                plansza[ruch.i2, ruch.j2] = new Queen(Kolor_figury.BLACK);
             }
             plansza[ruch.i1, ruch.j1] = null;
             return zwracana;
@@ -341,6 +341,10 @@ namespace Szachy3
         public static Vector2 IntToVector(int[] tab)
         {
             return new Vector2(tab[1] * 100, (7 - tab[0]) * 100);
+        }
+        public static Move UciToMove(string uci)
+        {
+            return new Move(uci[1] - '1', uci[0] - 'a', uci[3] - '1', uci[2] - 'a');
         }
         public void Show()
         {

@@ -4,10 +4,14 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Mime;
+using System.Xml.Linq;
+using Newtonsoft.Json.Linq;
+using System.Runtime.InteropServices;
 
 namespace Szachy3
 {
@@ -149,14 +153,17 @@ namespace Szachy3
         }
 
         // ustawienia
-        
-        private const string pozycja_startowa= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+        private string fileWithSettings = "Settings.json";
         public bool block_mouse = false;
+
+        private string pozycja_startowa= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
         public bool wylaczyc_kolejnosc = false;
         public Kolor_figury czyja_kolej = Kolor_figury.WHITE;
         public bool mute = false;
-        public bool bot = true;
-        
+        public bool bot = false;
+        public static string engine_path = "stockfish.exe";
+        public static Kolor_figury engine_color=Kolor_figury.BLACK;
+
         // board
         Texture2D board;
         Vector2 board_position;
@@ -223,7 +230,9 @@ namespace Szachy3
         }
 
         protected override void Initialize()
-        { 
+        {
+            LoadUserSettings();
+
             Initialize_Sounds();
             Initialize_Board();
             Initialize_Pieces(pozycja_startowa);
@@ -236,6 +245,47 @@ namespace Szachy3
 
             base.Initialize();
         }
+
+        private void LoadUserSettings()
+        {
+            string jsonString = File.ReadAllText(fileWithSettings);
+            dynamic data = JObject.Parse(jsonString);
+
+            try
+            {
+                if(!File.Exists(fileWithSettings))
+                    throw new Exception("Setting file not found");
+
+                pozycja_startowa = data.start_position ?? pozycja_startowa;
+                wylaczyc_kolejnosc = data.disable_order ?? wylaczyc_kolejnosc;
+                string kolej= data.whose_turn??"WHITE";
+                if(kolej== "WHITE")
+                    czyja_kolej = Kolor_figury.WHITE;
+                else if(kolej=="BLACK")
+                    czyja_kolej = Kolor_figury.BLACK;
+                mute = data.mute ?? mute;
+                bot = data.play_with_engine ?? bot;
+                engine_path = data.engine_path ?? engine_path;
+                string engine_colorSetting = data.engine_color ?? "BLACK";
+                if (engine_colorSetting == "WHITE")
+                    engine_color = Kolor_figury.WHITE;
+                else if (engine_colorSetting == "BLACK")
+                    engine_color = Kolor_figury.BLACK;
+
+                if(bot && !File.Exists(engine_path))
+                {
+                    throw new Exception("Turn off playing with engine or specify correct engine path");
+                }
+
+            }
+            catch (Exception e)
+            {
+                ShowMessageBox(e.Message, "Error in settings");
+                Exit();
+            }
+        }
+
+        
 
         protected override void LoadContent()
         {
@@ -757,6 +807,17 @@ namespace Szachy3
             if (numer_obrazka <animation_end_speed*8+1 ) numer_obrazka++;
             if(numer_obrazka%animation_end_speed==0 && mat)
                 krol_matowany.picture = Content.Load<Texture2D>($"bK{numer_obrazka/animation_end_speed}");
+        }
+
+
+
+        // MessageBox - Import the Windows API MessageBox function
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+
+        public void ShowMessageBox(string text, string caption)
+        {
+            MessageBox(IntPtr.Zero, text, caption, 0);
         }
 
     }

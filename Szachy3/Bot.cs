@@ -10,7 +10,9 @@ namespace Szachy3
 {
     internal class Bot
     {
-        Kolor_figury kolor_bota = Kolor_figury.BLACK;
+        Kolor_figury kolor_bota = Game1.engine_color;
+        string engine_path = Game1.engine_path;
+
         public Bot() { }
         public Move MakeMove(Board b)
         {
@@ -71,7 +73,7 @@ namespace Szachy3
             // Define the process start info
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "stockfish.exe",
+                FileName = engine_path,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,

@@ -10,8 +10,9 @@ namespace Szachy3
 {
     internal class Bot
     {
-        Kolor_figury kolor_bota = Game1.engine_color;
+        Kolor_figury kolor_bota =Game1.engine_color;
         string engine_path = Game1.engine_path;
+        string engine_depth = Game1.engine_depth;
 
         public Bot() { }
         public Move MakeMove(Board b)
@@ -69,7 +70,7 @@ namespace Szachy3
 
         public Move MakeMoveFromFileEngine(Board b)
         {
-            string fen = MakeFEN(b, "b");
+            string fen = MakeFEN(b, (kolor_bota==Kolor_figury.WHITE)?"w":"b");
             // Define the process start info
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -91,7 +92,7 @@ namespace Szachy3
                 // Send a command to the external program
                 Debug.WriteLine(fen);
                 sw.WriteLine("position fen "+fen);
-                sw.WriteLine("go depth 20");
+                sw.WriteLine("go depth "+engine_depth);
 
                 do
                 {

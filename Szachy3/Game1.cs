@@ -162,6 +162,7 @@ namespace Szachy3
         public bool mute = false;
         public bool bot = false;
         public static string engine_path = "stockfish.exe";
+        public static string engine_depth = "4";
         public static Kolor_figury engine_color=Kolor_figury.BLACK;
 
         // board
@@ -266,6 +267,7 @@ namespace Szachy3
                 mute = data.mute ?? mute;
                 bot = data.play_with_engine ?? bot;
                 engine_path = data.engine_path ?? engine_path;
+                engine_depth = data.engine_depth?? engine_depth;
                 string engine_colorSetting = data.engine_color ?? "BLACK";
                 if (engine_colorSetting == "WHITE")
                     engine_color = Kolor_figury.WHITE;
@@ -407,7 +409,7 @@ namespace Szachy3
                 return;
             }
             if (figury.Any(x => x.promocja) || figury.Any(x=> (x.zbity && (x.position!=x.miejsce_docelowe)) )) return;
-            if(bot && czyja_kolej==Kolor_figury.BLACK)
+            if(bot && czyja_kolej==engine_color)
             {
                 bot_zrob_ruch();
             }
@@ -534,7 +536,7 @@ namespace Szachy3
                 //wyswietl_historie();
                 
             }
-            czyja_kolej = Kolor_figury.WHITE;
+            czyja_kolej = engine_color== Kolor_figury.WHITE?Kolor_figury.BLACK:Kolor_figury.WHITE;
             koniec_gry = czy_koniec_gry();
         }
         private Move znajdz_wykonany_ruch()
